@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
 import "@/app/globals.css";
+import { Lato } from "next/font/google";
+
+const lato = Lato({
+  subsets: ["latin"],
+  variable: "--font-lato",
+  weight: ["400", "700"],
+});
 
 export const metadata: Metadata = {
-  title: "Mecat | AI-Powered Investment Marketplace",
+  title: "Mecat",
   description:
-    "Connect with businesses through AI Business Avatars. Discovery, due diligence, and communication automation.",
+    "AI powered investment marketplace connecting investors with vetted business and end-to-end guarantees for secure investments",
 };
 
 export default function RootLayout({
@@ -14,20 +21,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className="antialiased bg-slate-950 text-slate-100 min-h-screen">
-        <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur">
-          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-            <a href="/" className="text-xl font-bold tracking-tight">
-              Mecat
-            </a>
-            <nav className="flex gap-6">
-              <a href="/" className="text-slate-400 hover:text-white transition">
-                Marketplace
-              </a>
-            </nav>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 py-8">{children}</main>
+      <body className={`bg-background antialiased min-h-screen ${lato.variable} font-sans`}>
+        {children}
       </body>
     </html>
   );
