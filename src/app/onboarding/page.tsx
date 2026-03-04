@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { onboardingSchema, OnboardingInput, bsector, bsize, revenue, goal, years } from "@/lib/onboarding/schemas";
-import { apiFetch } from "@/lib/api";
+import { submitOnboarding } from "@/api/onboarding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -46,11 +46,7 @@ export default function OnboardingPage() {
   };
 
   const onSubmit = async (data: OnboardingInput) => {
-    await apiFetch("/onboarding", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-
+    await submitOnboarding(data);
     router.push("/dashboard");
   };
 
