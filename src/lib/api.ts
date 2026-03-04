@@ -29,14 +29,22 @@ export async function apiFetch<T>(
         "Content-Type": "application/json",
         ...options?.headers,
       },
-      credentials: "include", // important for cookie auth
+      credentials: "include",
       signal: controller.signal,
     });
 
-    const json: ApiResponse<T> = await res.json();
+    let json: ApiResponse<T>;
+    try {
+      json = await res.json();
+    } catch {
+      // Non-JSON response (backend down, proxy error, HTML error page)
+      throw new Error(`Server error (${res.status}): backend may be unavailable`);
+    }
 
     if (!res.ok || !json.success) {
-      throw new Error(json.error || "API request failed");
+      const err = new Error(json.error || "API request failed") as Error & { status: number };
+      err.status = res.status;
+      throw err;
     }
 
     return json.data;

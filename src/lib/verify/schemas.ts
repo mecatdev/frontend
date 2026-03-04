@@ -1,16 +1,16 @@
 import { z } from "zod";
 
 export const businessAseanLocation = [
-  "INDONESIA",
-  "MALAYSIA",
-  "SINGAPORE",
-  "THAILAND",
-  "PHILIPPINES",
-  "VIETNAM",
-  "BRUNEI",
-  "CAMBODIA",
-  "LAOS",
-  "MYANMAR",
+  "Indonesia",
+  "Malaysia",
+  "Singapore",
+  "Thailand",
+  "Philippines",
+  "Vietnam",
+  "Brunei",
+  "Cambodia",
+  "Laos",
+  "Myanmar",
 ] as const;
 
 const imgTypes = ["image/jpeg", "image/png", "image/gif"] as const;

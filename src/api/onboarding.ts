@@ -4,6 +4,7 @@ import type { OnboardingInput } from "@/lib/onboarding/schemas";
 export interface OnboardingResponse {
   businessId: string;
   slug: string;
+  userId: string;
 }
 
 /**
@@ -13,8 +14,13 @@ export interface OnboardingResponse {
  * After this, user is redirected to /dashboard for verification.
  */
 export async function submitOnboarding(data: OnboardingInput): Promise<OnboardingResponse> {
-  return apiFetch<OnboardingResponse>("/onboarding", {
+  const result = await apiFetch<OnboardingResponse>("/onboarding", {
     method: "POST",
     body: JSON.stringify(data),
   });
+  // Store userId so subsequent requests can send x-user-id header
+  if (typeof window !== "undefined" && result.userId) {
+    localStorage.setItem("mecat_user_id", result.userId);
+  }
+  return result;
 }
