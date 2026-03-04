@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const businessSectors = 
+export const businessSectors = 
 [
     "F&B",
     "Retail",
@@ -36,7 +36,7 @@ export const monthlyRevenue = [
 export const mainGoals = [
   "funding",
   "business_deals",
-  "product_operational",
+  "finding_partners",
 ] as const;
 
 export type bsector = typeof businessSectors[number];
@@ -45,26 +45,13 @@ export type years = typeof yearsActive[number];
 export type revenue = typeof monthlyRevenue[number];
 export type goal = typeof mainGoals[number];
 
-export const businessNameSchema = z.string().min(3, "Business name must be at least 3 characters").max(100);
-
-export const businessSectorSchema = z.enum(businessSectors, "Please select a valid business sector");
-
-export const businessSizeSchema = z.enum(businessSizes, "Please select a valid business size")
-
-export const yearsActiveSchema = z.enum(yearsActive, "Please select a valid range for years active")
-
-export const monthlyRevenueSchema = z.enum(monthlyRevenue, "Please select a valid monthly revenue range");
-
-export const mainGoalSchema = z.enum(mainGoals, "Please select a valid main goal");
-
-
 export const onboardingSchema = z.object({
-  businessName: businessNameSchema,
-  businessSector: businessSectorSchema,
-  businessSize: businessSizeSchema,
-  yearsActive: yearsActiveSchema,
-  monthlyRevenue: monthlyRevenueSchema,
-  mainGoal: mainGoalSchema,
+  businessName:   z.string().min(3, "Business name must be at least 3 characters").max(100),
+  businessSector: z.enum(businessSectors, { message: "Please select a valid business sector" }),
+  businessSize:   z.enum(businessSizes,   { message: "Please select a valid business size" }),
+  yearsActive:    z.enum(yearsActive,     { message: "Please select a valid range" }),
+  monthlyRevenue: z.enum(monthlyRevenue,  { message: "Please select a valid monthly revenue range" }),
+  mainGoal:       z.enum(mainGoals,       { message: "Please select a valid main goal" }),
 });
 
 export type OnboardingInput = z.infer<typeof onboardingSchema>;

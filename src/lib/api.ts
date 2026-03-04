@@ -1,7 +1,4 @@
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || "http://localhost:4000";
-
-const API_BASE =
-  typeof window !== "undefined" ? "/api/backend" : `${BACKEND_URL}/api`; // optional if proxy is set
+const API_BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000"}/api`;
 
 /**
  * Standard API response contract

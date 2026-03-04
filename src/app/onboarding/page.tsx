@@ -183,7 +183,7 @@ export default function OnboardingPage() {
               <SelectContent>
                 <SelectItem value="funding">Funding</SelectItem>
                 <SelectItem value="business_deals">Make a business deals</SelectItem>
-                <SelectItem value="product_operational">Make my products possible</SelectItem>
+                <SelectItem value="finding_partners">Finding a partner</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-red-500 text-sm">

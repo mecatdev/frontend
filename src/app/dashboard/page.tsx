@@ -33,7 +33,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!business) return null; // redirecting
+  if (!business) return null;
 
   return business.verificationStatus === "VERIFIED"
     ? <VerifiedDashboard business={business} />

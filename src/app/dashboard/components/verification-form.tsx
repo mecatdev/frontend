@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { verifySchema, VerifyInput, businessAseanLocation } from "@/lib/verify/schemas";
+import { verifySchema, VerifyInput, businessAseanLocation, businessStages } from "@/lib/verify/schemas";
 import { verifyBusiness, type BusinessVerificationStatus } from "@/api/businesses";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,15 +80,17 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
         </div>
 
         <div className="space-y-4">
+          {/* Owner */}
           <div>
             <Input
-              placeholder="Owner full name"
+              placeholder="Owner full name *"
               className="h-14 text-base rounded-xl"
               {...form.register("ownerName")}
             />
             <p className="text-red-500 text-xs mt-1">{form.formState.errors.ownerName?.message}</p>
           </div>
 
+          {/* Location */}
           <div>
             <Select
               onValueChange={(val) =>
@@ -96,7 +98,7 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
               }
             >
               <SelectTrigger className="h-14 rounded-xl">
-                <SelectValue placeholder="Business Location" />
+                <SelectValue placeholder="Business location *" />
               </SelectTrigger>
               <SelectContent>
                 {businessAseanLocation.map((c) => (
@@ -107,9 +109,20 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
             <p className="text-red-500 text-xs mt-1">{form.formState.errors.businessLocation?.message}</p>
           </div>
 
+          {/* Tagline */}
+          <div>
+            <Input
+              placeholder="Tagline (one-liner, max 160 chars)"
+              className="h-14 text-base rounded-xl"
+              {...form.register("tagline")}
+            />
+            <p className="text-red-500 text-xs mt-1">{form.formState.errors.tagline?.message}</p>
+          </div>
+
+          {/* Description */}
           <div>
             <Textarea
-              placeholder="Business description (min. 10 characters)"
+              placeholder="Business description * (min. 10 characters)"
               className="rounded-xl resize-none"
               rows={3}
               {...form.register("businessDescription")}
@@ -117,14 +130,63 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
             <p className="text-red-500 text-xs mt-1">{form.formState.errors.businessDescription?.message}</p>
           </div>
 
+          {/* Business model */}
           <div>
             <Textarea
-              placeholder="Business model (how do you make money?)"
+              placeholder="Business model * (how do you make money?)"
               className="rounded-xl resize-none"
               rows={3}
               {...form.register("businessModel")}
             />
             <p className="text-red-500 text-xs mt-1">{form.formState.errors.businessModel?.message}</p>
+          </div>
+
+          {/* Stage */}
+          <div>
+            <Select
+              onValueChange={(val) =>
+                form.setValue("stage", val as VerifyInput["stage"], { shouldValidate: true })
+              }
+            >
+              <SelectTrigger className="h-14 rounded-xl">
+                <SelectValue placeholder="Business stage" />
+              </SelectTrigger>
+              <SelectContent>
+                {businessStages.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s.replace("_", " ")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-red-500 text-xs mt-1">{form.formState.errors.stage?.message}</p>
+          </div>
+
+          {/* Funding ask — always USD */}
+          <div>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+                USD
+              </span>
+              <Input
+                type="number"
+                min={0}
+                placeholder="Funding ask amount"
+                className="h-14 text-base rounded-xl pl-16"
+                {...form.register("fundingAsk", { valueAsNumber: true })}
+              />
+            </div>
+            <p className="text-red-500 text-xs mt-1">{form.formState.errors.fundingAsk?.message}</p>
+          </div>
+
+          {/* Website */}
+          <div>
+            <Input
+              placeholder="Website URL (https://...)"
+              className="h-14 text-base rounded-xl"
+              {...form.register("websiteUrl")}
+            />
+            <p className="text-red-500 text-xs mt-1">{form.formState.errors.websiteUrl?.message}</p>
           </div>
         </div>
 
