@@ -22,7 +22,7 @@ export function DashboardSidebar() {
 
   const handleLogout = async () => {
     // TODO: clear auth token / session
-    router.push("/login");
+    router.push("/auth/login");
   };
 
   return (
@@ -48,7 +48,7 @@ export function DashboardSidebar() {
                 asChild
                 variant={isActive ? "default" : "ghost"}
                 className={cn(
-                  "justify-start gap-3 rounded-xl hover:bg-primary/10",
+                  "justify-start gap-3 rounded-xl hover:bg-primary/10 hover:text-primary",
                   isActive && "shadow-sm"
                 )}
               >

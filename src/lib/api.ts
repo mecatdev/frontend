@@ -1,7 +1,4 @@
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || "http://localhost:4000";
-
-const API_BASE =
-  typeof window !== "undefined" ? "/api/backend" : `${BACKEND_URL}/api`; // optional if proxy is set
+const API_BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000"}/api`;
 
 /**
  * Standard API response contract
@@ -29,14 +26,22 @@ export async function apiFetch<T>(
         "Content-Type": "application/json",
         ...options?.headers,
       },
-      credentials: "include", // important for cookie auth
+      credentials: "include",
       signal: controller.signal,
     });
 
-    const json: ApiResponse<T> = await res.json();
+    let json: ApiResponse<T>;
+    try {
+      json = await res.json();
+    } catch {
+      // Non-JSON response (backend down, proxy error, HTML error page)
+      throw new Error(`Server error (${res.status}): backend may be unavailable`);
+    }
 
     if (!res.ok || !json.success) {
-      throw new Error(json.error || "API request failed");
+      const err = new Error(json.error || "API request failed") as Error & { status: number };
+      err.status = res.status;
+      throw err;
     }
 
     return json.data;

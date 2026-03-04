@@ -8,6 +8,9 @@ module.exports = {
   ],
   theme: {
   	extend: {
+  		boxShadow: {
+  			'inset-md': 'inset 0 4px 8px 0 rgb(0 0 0 / 0.05)'
+  		},
   		fontFamily: {
   			sans: [
   				'var(--font-lato)',

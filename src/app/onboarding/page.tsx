@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { onboardingSchema, OnboardingInput, bsector, bsize, revenue, goal, years } from "@/lib/onboarding/schemas";
-import { apiFetch } from "@/lib/api";
+import { submitOnboarding } from "@/api/onboarding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -46,11 +46,7 @@ export default function OnboardingPage() {
   };
 
   const onSubmit = async (data: OnboardingInput) => {
-    await apiFetch("/onboarding", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-
+    await submitOnboarding(data);
     router.push("/dashboard");
   };
 
@@ -187,7 +183,7 @@ export default function OnboardingPage() {
               <SelectContent>
                 <SelectItem value="funding">Funding</SelectItem>
                 <SelectItem value="business_deals">Make a business deals</SelectItem>
-                <SelectItem value="product_operational">Make my products possible</SelectItem>
+                <SelectItem value="finding_partners">Finding a partner</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-red-500 text-sm">

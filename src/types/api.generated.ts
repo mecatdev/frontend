@@ -21,6 +21,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register a new user */
+        post: operations["register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login and get JWT token */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/businesses/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get current owner's business */
+        get: operations["getMyBusiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/businesses/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit business verification */
+        post: operations["verifyBusiness"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/businesses": {
         parameters: {
             query?: never;
@@ -28,10 +96,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List published businesses */
+        /** List published businesses (marketplace) */
         get: operations["listBusinesses"];
         put?: never;
-        post?: never;
+        /** Create a new business (founder only) */
+        post: operations["createBusiness"];
         delete?: never;
         options?: never;
         head?: never;
@@ -55,7 +124,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/contracts/analyze": {
+    "/api/businesses/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -64,15 +133,33 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Analyze investor contract for risks */
-        post: operations["analyzeContract"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update business (founder/owner only) */
+        patch: operations["updateBusiness"];
+        trace?: never;
+    };
+    "/api/businesses/{id}/knowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List knowledge chunks for a business */
+        get: operations["listKnowledge"];
+        put?: never;
+        /** Upload & embed knowledge chunk (founder only) */
+        post: operations["uploadKnowledge"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/knowledge/index": {
+    "/api/businesses/{id}/knowledge/{chunkId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -81,15 +168,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Index a knowledge chunk for a business (RAG) */
-        post: operations["indexKnowledgeChunk"];
-        delete?: never;
+        post?: never;
+        /** Delete a knowledge chunk */
+        delete: operations["deleteKnowledgeChunk"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/voice/session": {
+    "/api/conversations": {
         parameters: {
             query?: never;
             header?: never;
@@ -98,23 +185,40 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Initialize a voice assistant session */
-        post: operations["createVoiceSession"];
+        /** Start a new conversation with a business AI avatar (investor only) */
+        post: operations["createConversation"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/voice/status": {
+    "/api/conversations/{id}/message": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Voice service status */
-        get: operations["getVoiceStatus"];
+        get?: never;
+        put?: never;
+        /** Send a message to the AI avatar (RAG + Gemini) */
+        post: operations["sendMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get conversation message history */
+        get: operations["getMessages"];
         put?: never;
         post?: never;
         delete?: never;
@@ -123,15 +227,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/demo-user": {
+    "/api/legal/generate-term-sheet": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get or create demo investor user */
-        get: operations["getDemoUser"];
+        get?: never;
+        put?: never;
+        /** Generate AI term sheet draft */
+        post: operations["generateTermSheet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/legal/analyze-document": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload & analyze a contract document */
+        post: operations["analyzeDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a new deal */
+        post: operations["createDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get deal detail */
+        get: operations["getDeal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/{id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export deal document to .docx */
+        get: operations["exportDeal"];
         put?: never;
         post?: never;
         delete?: never;
@@ -154,20 +326,23 @@ export interface components {
             error: string;
             details?: Record<string, never>;
         };
-        HealthResponse: {
-            /** @example ok */
-            status?: string;
-            /** Format: date-time */
-            timestamp?: string;
-        };
         /** @enum {string} */
         UserRole: "FOUNDER" | "INVESTOR";
+        /** @enum {string} */
+        BusinessStage: "IDEA" | "PRE_SEED" | "SEED" | "SERIES_A";
+        /** @enum {string} */
+        DealStatus: "DRAFT" | "NEGOTIATING" | "SIGNED" | "CANCELLED";
+        /** @enum {string} */
+        DocumentType: "TERM_SHEET" | "CONTRACT" | "OTHER";
+        /** @enum {string} */
+        BusinessVerificationStatus: "DRAFT" | "PENDING" | "VERIFIED" | "REJECTED";
         /** @enum {string} */
         VisualSceneType: "market_size" | "traction" | "revenue" | "team" | "generic";
         /** @enum {string} */
         VisualSceneEmotion: "confident" | "calm" | "urgent" | "visionary";
+        /** @enum {string} */
+        RiskSeverity: "low" | "medium" | "high" | "critical";
         User: {
-            /** @example clz1abc2300004iyk9xyz1mno */
             id: string;
             /** Format: email */
             email: string;
@@ -185,28 +360,43 @@ export interface components {
             slug: string;
             tagline?: string | null;
             industry?: string | null;
+            stage?: components["schemas"]["BusinessStage"];
             logoUrl?: string | null;
             fundingAsk?: number | null;
             fundingCurrency?: string | null;
             isPublished: boolean;
+            verificationStatus?: components["schemas"]["BusinessVerificationStatus"];
             /** Format: date-time */
             createdAt: string;
         };
         Business: components["schemas"]["BusinessSummary"] & {
             ownerId?: string;
             description?: string | null;
-            marketSize?: string | null;
-            /** @description Structured traction data (metrics, growth) */
-            traction?: Record<string, never> | null;
-            /** @description Structured revenue data (historical, projections) */
-            revenue?: Record<string, never> | null;
-            /** @description Team structure and key members */
-            teamInfo?: Record<string, never> | null;
-            businessModel?: string | null;
             websiteUrl?: string | null;
             /** Format: date-time */
             updatedAt?: string;
             owner?: components["schemas"]["User"];
+        };
+        KnowledgeChunk: {
+            id: string;
+            businessId: string;
+            content: string;
+            /** @example pitch_deck */
+            sourceLabel?: string | null;
+            tokenCount?: number | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        Conversation: {
+            id: string;
+            investorId: string;
+            businessId: string;
+            title?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            business?: components["schemas"]["BusinessSummary"];
         };
         VisualScene: {
             type: components["schemas"]["VisualSceneType"];
@@ -215,43 +405,156 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        ContractRisk: {
-            /** @enum {string} */
-            severity: "low" | "medium" | "high" | "critical";
-            clause: string;
-            description: string;
-        };
-        ContractAnalysisResult: {
-            /** @description Narrative risk summary from AI */
-            riskFeedback: string;
-            /** @description Questions investor can ask via voice assistant */
-            recommendedQuestions: string[];
-            risks?: components["schemas"]["ContractRisk"][] | null;
-        };
-        VoiceSessionResponse: {
-            sessionId?: string | null;
-            businessId?: string | null;
-            userId?: string | null;
-            /** @description WebSocket URL for live voice (when implemented) */
-            wsUrl?: string | null;
-            message?: string;
-        };
-        AnalyzeContractRequest: {
-            /** @description Full text of the investor contract */
-            contractText: string;
-            /** @description Optional business context */
-            businessId?: string;
-        };
-        IndexKnowledgeRequest: {
-            businessId: string;
+        Message: {
+            id: string;
+            conversationId: string;
+            senderId?: string | null;
             content: string;
-            metadata?: {
-                [key: string]: unknown;
-            } | null;
+            /** @enum {string} */
+            role: "user" | "assistant" | "system";
+            visualScene?: components["schemas"]["VisualScene"] | null;
+            /** Format: date-time */
+            createdAt: string;
         };
-        VoiceSessionRequest: {
-            businessId?: string;
-            userId?: string;
+        MessageResponse: {
+            messageId: string;
+            /** @example assistant */
+            role: string;
+            content: string;
+            visualScene?: components["schemas"]["VisualScene"] | null;
+        };
+        RiskFlag: {
+            /** @example Section 4.2 - Drag Along Rights */
+            clause: string;
+            severity: components["schemas"]["RiskSeverity"];
+            explanation: string;
+        };
+        DocumentAnalysisResponse: {
+            documentId: string;
+            summary: string;
+            riskFlags: components["schemas"]["RiskFlag"][];
+            missingClauses: string[];
+            riskScore: number;
+            /** @example AI-generated analysis. Please consult a licensed attorney. */
+            disclaimer?: string;
+        };
+        TermSheetResponse: {
+            documentId: string;
+            termSheetMarkdown: string;
+            /** @example AI-generated draft. Please consult a licensed attorney. */
+            disclaimer: string;
+        };
+        Deal: {
+            id: string;
+            businessId: string;
+            investorId: string;
+            preMoneyValuation?: number | null;
+            investmentAmount?: number | null;
+            equityPct?: number | null;
+            vestingMonths?: number | null;
+            liquidationPref?: string | null;
+            status: components["schemas"]["DealStatus"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        DealDocument: {
+            id: string;
+            type: components["schemas"]["DocumentType"];
+            riskScore: number | null;
+            fileUrl?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DealDetail: components["schemas"]["Deal"] & {
+            business?: components["schemas"]["BusinessSummary"];
+            investor?: components["schemas"]["User"];
+            documents?: components["schemas"]["DealDocument"][];
+        };
+        RegisterRequest: {
+            name: string;
+            /** Format: email */
+            email: string;
+            password: string;
+            role: components["schemas"]["UserRole"];
+        };
+        LoginRequest: {
+            /** Format: email */
+            email: string;
+            password: string;
+        };
+        AuthResponse: {
+            user: components["schemas"]["User"];
+            token: string;
+        };
+        CreateBusinessRequest: {
+            name: string;
+            tagline?: string;
+            description?: string;
+            industry?: string;
+            stage?: components["schemas"]["BusinessStage"];
+            fundingAsk?: number;
+            /** @default IDR */
+            fundingCurrency: string;
+            logoUrl?: string;
+            websiteUrl?: string;
+        };
+        UpdateBusinessRequest: {
+            name?: string;
+            tagline?: string;
+            description?: string;
+            industry?: string;
+            stage?: components["schemas"]["BusinessStage"];
+            fundingAsk?: number;
+            fundingCurrency?: string;
+            logoUrl?: string;
+            websiteUrl?: string;
+            isPublished?: boolean;
+        };
+        UploadKnowledgeRequest: {
+            content: string;
+            /**
+             * @description Source label e.g. "pitch_deck", "financials", "team"
+             * @example pitch_deck
+             */
+            sourceLabel?: string;
+        };
+        CreateConversationRequest: {
+            businessId: string;
+        };
+        SendMessageRequest: {
+            message: string;
+        };
+        GenerateTermSheetRequest: {
+            dealId: string;
+            preMoneyValuation: number;
+            investmentAmount: number;
+            equityPct: number;
+            /** @default 48 */
+            vestingMonths: number;
+            /** @default 1x non-participating */
+            liquidationPref: string;
+        };
+        AnalyzeDocumentRequest: {
+            /**
+             * Format: binary
+             * @description PDF or DOCX file
+             */
+            file: string;
+            /** @description Optional deal context */
+            dealId?: string;
+        };
+        CreateDealRequest: {
+            businessId: string;
+        };
+        VerifyBusinessRequest: {
+            ownerName: string;
+            /** @enum {string} */
+            businessLocation: "INDONESIA" | "MALAYSIA" | "SINGAPORE" | "THAILAND" | "PHILIPPINES" | "VIETNAM" | "BRUNEI" | "CAMBODIA" | "LAOS" | "MYANMAR";
+            businessDescription: string;
+            businessModel: string;
+            additionalDocuments?: string[] | null;
         };
     };
     responses: {
@@ -270,10 +573,34 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["ErrorResponse"] & {
-                    /** @description Zod flatten() error details */
-                    details?: Record<string, never>;
-                };
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Missing or invalid JWT token */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Insufficient permissions */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Resource already exists */
+        Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
             };
         };
     };
@@ -299,9 +626,141 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HealthResponse"];
+                    "application/json": {
+                        /** @example ok */
+                        status?: string;
+                        /** Format: date-time */
+                        timestamp?: string;
+                    };
                 };
             };
+        };
+    };
+    register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description User registered successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["AuthResponse"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Login successful */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["AuthResponse"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getMyBusiness: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-user-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Owner's business */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["BusinessSummary"];
+                    };
+                };
+            };
+            /** @description Missing x-user-id header */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    verifyBusiness: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-user-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyBusinessRequest"];
+            };
+        };
+        responses: {
+            /** @description Verification submitted, status set to PENDING */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: {
+                            id?: string;
+                            verificationStatus?: components["schemas"]["BusinessVerificationStatus"];
+                        };
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            /** @description Missing x-user-id header */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     listBusinesses: {
@@ -309,9 +768,10 @@ export interface operations {
             query?: {
                 /** @description Filter by industry */
                 industry?: string;
+                /** @description Filter by funding stage */
+                stage?: components["schemas"]["BusinessStage"];
+                page?: number;
                 limit?: number;
-                /** @description Cursor for pagination (last business id) */
-                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -327,9 +787,41 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SuccessResponse"] & {
                         data?: components["schemas"]["BusinessSummary"][];
+                        total?: number;
+                        page?: number;
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createBusiness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBusinessRequest"];
+            };
+        };
+        responses: {
+            /** @description Business created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["BusinessSummary"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getBusinessByIdOrSlug: {
@@ -358,47 +850,79 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    analyzeContract: {
+    updateBusiness: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AnalyzeContractRequest"];
+                "application/json": components["schemas"]["UpdateBusinessRequest"];
             };
         };
         responses: {
-            /** @description Contract analysis result */
+            /** @description Business updated */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["SuccessResponse"] & {
-                        data?: components["schemas"]["ContractAnalysisResult"];
+                        data?: components["schemas"]["BusinessSummary"];
                     };
                 };
             };
-            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
-    indexKnowledgeChunk: {
+    listKnowledge: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of knowledge chunks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["KnowledgeChunk"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    uploadKnowledge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["IndexKnowledgeRequest"];
+                "application/json": components["schemas"]["UploadKnowledgeRequest"];
             };
         };
         responses: {
-            /** @description Chunk indexed successfully */
+            /** @description Knowledge embedded successfully */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -406,15 +930,45 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SuccessResponse"] & {
                         data?: {
-                            chunkId?: string;
+                            /** @example 4 */
+                            chunksCreated?: number;
+                            /** @example Knowledge embedded successfully */
+                            message?: string;
                         };
                     };
                 };
             };
-            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
-    createVoiceSession: {
+    deleteKnowledgeChunk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                chunkId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chunk deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createConversation: {
         parameters: {
             query?: never;
             header?: never;
@@ -423,67 +977,220 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VoiceSessionRequest"];
+                "application/json": components["schemas"]["CreateConversationRequest"];
             };
         };
         responses: {
-            /** @description Voice session created */
+            /** @description Conversation started */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["Conversation"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    sendMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Conversation id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description AI response with visual scene */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["SuccessResponse"] & {
-                        data?: components["schemas"]["VoiceSessionResponse"];
+                        data?: components["schemas"]["MessageResponse"];
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
-    getVoiceStatus: {
+    getMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of messages */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["Message"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    generateTermSheet: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateTermSheetRequest"];
+            };
+        };
         responses: {
-            /** @description Voice service status */
+            /** @description Term sheet generated */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["SuccessResponse"] & {
-                        status?: string;
+                        data?: components["schemas"]["TermSheetResponse"];
                     };
                 };
             };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
         };
     };
-    getDemoUser: {
+    analyzeDocument: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AnalyzeDocumentRequest"];
+            };
+        };
         responses: {
-            /** @description Demo user info */
+            /** @description Document analysis result */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["SuccessResponse"] & {
-                        data?: {
-                            userId?: string;
-                        };
+                        data?: components["schemas"]["DocumentAnalysisResponse"];
                     };
                 };
             };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createDeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDealRequest"];
+            };
+        };
+        responses: {
+            /** @description Deal created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["Deal"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deal detail with documents */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["DealDetail"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    exportDeal: {
+        parameters: {
+            query: {
+                /** @description Document id to export */
+                documentId: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description .docx file download */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
 }
