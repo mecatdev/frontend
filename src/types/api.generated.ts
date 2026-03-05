@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/health": {
+    "/api/health": {
         parameters: {
             query?: never;
             header?: never;
@@ -21,7 +21,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/register": {
+    "/api/auth/register/founder": {
         parameters: {
             query?: never;
             header?: never;
@@ -30,15 +30,32 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register a new user */
-        post: operations["register"];
+        /** Register as a founder */
+        post: operations["registerFounder"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/login": {
+    "/api/auth/register/investor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register as an investor */
+        post: operations["registerInvestor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -49,6 +66,23 @@ export interface paths {
         put?: never;
         /** Login and get JWT token */
         post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout (invalidate token client-side) */
+        post: operations["logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -139,6 +173,57 @@ export interface paths {
         head?: never;
         /** Update business (founder/owner only) */
         patch: operations["updateBusiness"];
+        trace?: never;
+    };
+    "/api/businesses/{id}/investors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List investors who have a deal with this business */
+        get: operations["getBusinessInvestors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all investors */
+        get: operations["listInvestors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/investors/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single investor profile with their deals */
+        get: operations["getInvestor"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/businesses/{id}/knowledge": {
@@ -365,7 +450,7 @@ export interface components {
             fundingAsk?: number | null;
             fundingCurrency?: string | null;
             isPublished: boolean;
-            verificationStatus?: components["schemas"]["BusinessVerificationStatus"];
+            verificationStatus: components["schemas"]["BusinessVerificationStatus"];
             /** Format: date-time */
             createdAt: string;
         };
@@ -477,7 +562,6 @@ export interface components {
             /** Format: email */
             email: string;
             password: string;
-            role: components["schemas"]["UserRole"];
         };
         LoginRequest: {
             /** Format: email */
@@ -555,6 +639,62 @@ export interface components {
             businessDescription: string;
             businessModel: string;
             additionalDocuments?: string[] | null;
+        };
+        BusinessInvestor: {
+            investor: {
+                id: string;
+                name: string;
+                /** Format: email */
+                email: string;
+                avatarUrl?: string | null;
+                /** Format: date-time */
+                createdAt: string;
+            };
+            deal: {
+                id: string;
+                status: components["schemas"]["DealStatus"];
+                investmentAmount?: number | null;
+                equityPct?: number | null;
+                preMoneyValuation?: number | null;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+            };
+        };
+        InvestorProfile: {
+            id: string;
+            name: string;
+            /** Format: email */
+            email: string;
+            avatarUrl?: string | null;
+            /** @description Total number of deals */
+            totalDeals: number;
+            /** @description Number of NEGOTIATING or SIGNED deals */
+            activeDeals: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        InvestorDetail: components["schemas"]["InvestorProfile"] & {
+            deals?: {
+                id: string;
+                status: components["schemas"]["DealStatus"];
+                investmentAmount?: number | null;
+                equityPct?: number | null;
+                preMoneyValuation?: number | null;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+                business: {
+                    id: string;
+                    name: string;
+                    slug: string;
+                    logoUrl?: string | null;
+                    industry?: string | null;
+                    stage?: components["schemas"]["BusinessStage"];
+                };
+            }[];
         };
     };
     responses: {
@@ -636,7 +776,7 @@ export interface operations {
             };
         };
     };
-    register: {
+    registerFounder: {
         parameters: {
             query?: never;
             header?: never;
@@ -649,7 +789,35 @@ export interface operations {
             };
         };
         responses: {
-            /** @description User registered successfully */
+            /** @description Founder registered successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["AuthResponse"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    registerInvestor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Investor registered successfully */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -688,15 +856,40 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logged out successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: {
+                            /** @example Logged out successfully */
+                            message?: string;
+                        };
+                    };
+                };
+            };
             401: components["responses"]["Unauthorized"];
         };
     };
     getMyBusiness: {
         parameters: {
             query?: never;
-            header: {
-                "x-user-id": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -713,22 +906,14 @@ export interface operations {
                     };
                 };
             };
-            /** @description Missing x-user-id header */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
     };
     verifyBusiness: {
         parameters: {
             query?: never;
-            header: {
-                "x-user-id": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -753,13 +938,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ValidationError"];
-            /** @description Missing x-user-id header */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -878,6 +1057,97 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getBusinessInvestors: {
+        parameters: {
+            query?: {
+                /** @description Filter by deal status */
+                status?: components["schemas"]["DealStatus"];
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Business id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of investors with deal info */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["BusinessInvestor"][];
+                        total?: number;
+                        page?: number;
+                        limit?: number;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listInvestors: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of investors */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["InvestorProfile"][];
+                        total?: number;
+                        page?: number;
+                        limit?: number;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getInvestor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Investor user id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Investor profile with deal history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["InvestorDetail"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
     };

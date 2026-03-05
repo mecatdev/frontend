@@ -22,8 +22,6 @@ export default function LoginPage() {
 
     try {
       const data = await loginByEmail(email.trim(), password);
-      localStorage.setItem("mecat_user_id", data.userId);
-
       if (data.hasBusiness) {
         router.push("/dashboard");
       } else {

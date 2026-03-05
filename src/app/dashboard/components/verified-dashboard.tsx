@@ -2,6 +2,7 @@
 
 import { type MyBusiness } from "@/api/businesses";
 import Image from "next/image";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export function VerifiedDashboard({ business }: { business: MyBusiness }) {
   return (
@@ -19,7 +20,13 @@ export function VerifiedDashboard({ business }: { business: MyBusiness }) {
         <p className="text-muted-foreground text-sm">
           Your business is {business.isPublished ? "live on the marketplace." : "not yet published."}
         </p>
-        {/* TODO: dashboard content (analytics, deals, etc.) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle></CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
       </div>
     </div>
   );

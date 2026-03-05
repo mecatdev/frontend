@@ -8,14 +8,13 @@ import { VerificationForm } from "@/app/dashboard/components/verification-form";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { business, error, loading } = useMyBusiness();
+  const { business, error, loading, isUnauthenticated } = useMyBusiness();
 
-  // No business found (404 / no userId) → send to onboarding
   useEffect(() => {
-    if (!loading && !error && !business) {
-      router.replace("/onboarding");
-    }
-  }, [loading, error, business, router]);
+    if (loading) return;
+    if (isUnauthenticated) router.replace("/auth/login");
+    else if (!error && !business) router.replace("/onboarding");
+  }, [loading, error, business, isUnauthenticated, router]);
 
   if (loading) {
     return (

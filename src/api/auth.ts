@@ -1,7 +1,6 @@
 export interface LoginResponse {
-  userId: string;
-  name: string;
-  role: string;
+  user: { id: string; name: string; email: string; role: string };
+  token: string;
   hasBusiness: boolean;
   business: {
     id: string;
@@ -11,16 +10,17 @@ export interface LoginResponse {
 }
 
 export interface RegisterResponse {
-  userId: string;
-  name: string;
+  user: { id: string; name: string; email: string; role: string };
+  token: string;
 }
 
-const BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000"}/auth`;
+const BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000"}/api/auth`;
 
 async function authFetch<T>(path: string, body: object): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(body),
   });
   const json = await res.json();
@@ -37,5 +37,5 @@ export function loginByEmail(email: string, password: string): Promise<LoginResp
 }
 
 export function registerUser(name: string, email: string, password: string): Promise<RegisterResponse> {
-  return authFetch<RegisterResponse>("/register", { name, email, password });
+  return authFetch<RegisterResponse>("/register/founder", { name, email, password });
 }
