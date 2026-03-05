@@ -32,7 +32,7 @@ export const verifySchema = z.object({
   tagline: z.string().max(160, "Tagline must be less than 160 characters").optional(),
   stage: z.enum(businessStages).optional(),
   fundingAsk: z
-    .number({ invalid_type_error: "Funding ask must be a number" })
+    .number({ error: "Funding ask must be a number" })
     .positive("Funding ask must be a positive number")
     .optional(),
   websiteUrl: z
