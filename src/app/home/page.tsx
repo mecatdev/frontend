@@ -162,17 +162,14 @@ type DeckSectionProps = {
 function DeckSection({ label, isActive, onActivate, children }: DeckSectionProps) {
   return (
     <section
-      className={cn(
-        "w-full flex flex-col gap-4 rounded-2xl p-4 border transition-colors duration-200",
-        isActive ? "border-primary/40 bg-primary/5" : "border-transparent"
-      )}
+      className="w-full flex flex-col gap-4 p-4"
       onMouseEnter={onActivate}
     >
       <div className="flex items-center gap-2">
         <h2 className="text-sm font-semibold text-foreground">{label}</h2>
         {isActive && onActivate && (
           <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-            keys active
+            active
           </span>
         )}
       </div>
