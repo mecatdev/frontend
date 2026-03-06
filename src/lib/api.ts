@@ -27,6 +27,29 @@ export interface Business {
   owner: { id: string; name: string; avatarUrl: string | null };
 }
 
+// --- Generic authenticated fetch ---
+
+export async function apiFetch<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers ?? {}),
+    },
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    const err = new Error(json.error || "Request failed") as Error & { status: number };
+    err.status = res.status;
+    throw err;
+  }
+  return json.data;
+}
+
 // --- Contract Analysis (AI #2) ---
 
 export interface ContractAnalysisResult {

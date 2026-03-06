@@ -1,4 +1,4 @@
-import type { Business } from "./types";
+import type { Business } from "@/types/business";
 
 export const DISCOVERY_BUSINESSES: Business[] = [
   {

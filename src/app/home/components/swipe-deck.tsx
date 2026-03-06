@@ -82,6 +82,7 @@ export const SwipeDeck = forwardRef<SwipeDeckHandle, Props>(function SwipeDeck(
 
   function onPointerDown(e: React.PointerEvent) {
     if (animState !== "idle") return;
+    if ((e.target as HTMLElement).closest('button, a, [role="button"]')) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     isDragging.current = true;
     startX.current = e.clientX;
