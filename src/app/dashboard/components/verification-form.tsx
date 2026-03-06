@@ -165,7 +165,7 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
           {/* Funding ask — always USD */}
           <div>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-black/60 text-sm font-semibold">
                 USD
               </span>
               <Input

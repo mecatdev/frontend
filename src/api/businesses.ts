@@ -24,40 +24,17 @@ export interface VerifyBusinessResponse {
   verificationStatus: BusinessVerificationStatus;
 }
 
-/** Read userId from localStorage (temporary until auth is implemented) */
-function userIdHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const id = localStorage.getItem("mecat_user_id");
-  return id ? { "x-user-id": id } : {};
-}
-
-/**
- * GET /api/businesses/me
- * Get current owner's business (verificationStatus, isPublished, etc.)
- */
 export async function getMyBusiness(): Promise<MyBusiness> {
-  return apiFetch<MyBusiness>("/businesses/me", {
-    headers: userIdHeader(),
-  });
+  return apiFetch<MyBusiness>("/businesses/me");
 }
 
-/**
- * POST /api/businesses/verify
- * Submit verification form. Sets verificationStatus → PENDING.
- * Business stays isPublished: false until admin approves.
- */
 export async function verifyBusiness(data: VerifyInput): Promise<VerifyBusinessResponse> {
   return apiFetch<VerifyBusinessResponse>("/businesses/verify", {
     method: "POST",
-    headers: userIdHeader(),
     body: JSON.stringify(data),
   });
 }
 
-/**
- * GET /api/businesses/:idOrSlug
- * Public business detail.
- */
 export async function getBusiness(idOrSlug: string): Promise<MyBusiness> {
   return apiFetch<MyBusiness>(`/businesses/${idOrSlug}`);
 }

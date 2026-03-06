@@ -21,8 +21,7 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      const data = await registerUser(name.trim(), email.trim(), password);
-      localStorage.setItem("mecat_user_id", data.userId);
+      await registerUser(name.trim(), email.trim(), password);
       router.push("/onboarding");
     } catch (err: unknown) {
       const status = (err as Error & { status?: number }).status;
