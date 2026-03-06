@@ -1,42 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useMyBusiness } from "@/hooks/use-my-business";
+import { useBusinessContext } from "@/app/dashboard/context/business-context";
 import { VerifiedDashboard } from "@/app/dashboard/components/verified-dashboard";
 import { VerificationForm } from "@/app/dashboard/components/verification-form";
 
-
 export default function DashboardPage() {
-  const router = useRouter();
-  const { business, error, loading, isUnauthenticated } = useMyBusiness();
-
-  useEffect(() => {
-    if (loading) return;
-    if (isUnauthenticated) router.replace("/auth/login");
-    else if (!error && !business) router.replace("/onboarding");
-  }, [loading, error, business, isUnauthenticated, router]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground text-sm">Loading...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <Image src="/logo.svg" alt="" width={100} height={100} />
-        <p className="text-red-500 text-sm bg-red-50 border border-red-100 rounded-xl p-4">
-          Business are failed to load: {error}
-        </p>
-      </div>
-    );
-  }
-
-  if (!business) return null;
+  const business = useBusinessContext();
 
   return business.verificationStatus === "VERIFIED"
     ? <VerifiedDashboard business={business} />
