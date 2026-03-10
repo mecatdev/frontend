@@ -29,7 +29,26 @@ function formatCurrency(amount: number | null, currency = "USD") {
   }).format(amount);
 }
 
-export default function ProfilePage() {
+function Row({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className={`text-right break-all ${mono ? "font-mono text-xs" : ""}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+export function ProfileView() {
   const router = useRouter();
   const { getToken } = useAuth();
   const { signOut } = useClerk();
@@ -49,7 +68,9 @@ export default function ProfilePage() {
         setProfile(dbProfile);
 
         if (dbProfile.role === "FOUNDER") {
-          apiFetch<MyBusiness>("/businesses/me", {}, token).then(setBusiness).catch(() => setBusiness(null));
+          apiFetch<MyBusiness>("/businesses/me", {}, token)
+            .then(setBusiness)
+            .catch(() => setBusiness(null));
         } else if (dbProfile.role === "INVESTOR") {
           getInvestorProfile(dbProfile.id, token)
             .then(setInvestorData)
@@ -74,7 +95,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center p-8">
         <p className="text-sm text-muted-foreground">Memuat profil...</p>
       </div>
     );
@@ -82,17 +103,15 @@ export default function ProfilePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
         <p className="text-sm text-red-500">{error}</p>
-        <Button variant="outline" onClick={handleLogout}>
-          Logout
-        </Button>
+        <Button variant="outline" onClick={handleLogout}>Logout</Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-muted/40 py-10 px-4">
+    <div className="py-8 px-6">
       <div className="max-w-2xl mx-auto space-y-6">
 
         {/* Header */}
@@ -179,23 +198,12 @@ export default function ProfilePage() {
                   <Separator />
                   <Row label="Stage" value={business.stage ?? "—"} />
                   <Separator />
-                  <Row
-                    label="Funding Ask"
-                    value={formatCurrency(business.fundingAsk, business.fundingCurrency ?? "USD")}
-                  />
+                  <Row label="Funding Ask" value={formatCurrency(business.fundingAsk, business.fundingCurrency ?? "USD")} />
                   <Separator />
                   <Row
                     label="Status Verifikasi"
                     value={
-                      <Badge
-                        variant={
-                          business.verificationStatus === "VERIFIED"
-                            ? "default"
-                            : business.verificationStatus === "PENDING"
-                            ? "secondary"
-                            : "outline"
-                        }
-                      >
+                      <Badge variant={business.verificationStatus === "VERIFIED" ? "default" : business.verificationStatus === "PENDING" ? "secondary" : "outline"}>
                         {business.verificationStatus}
                       </Badge>
                     }
@@ -205,17 +213,13 @@ export default function ProfilePage() {
                   <Separator />
                   <Row label="Dibuat" value={formatDate(business.createdAt)} />
                   <div className="pt-2">
-                    <Button size="sm" onClick={() => router.push("/dashboard")}>
-                      Ke Dashboard
-                    </Button>
+                    <Button size="sm" onClick={() => router.push("/dashboard")}>Ke Dashboard</Button>
                   </div>
                 </>
               ) : (
                 <div className="space-y-3">
                   <p className="text-muted-foreground">Belum ada bisnis terdaftar.</p>
-                  <Button size="sm" onClick={() => router.push("/onboarding")}>
-                    Buat Bisnis
-                  </Button>
+                  <Button size="sm" onClick={() => router.push("/onboarding")}>Buat Bisnis</Button>
                 </div>
               )}
             </CardContent>
@@ -247,10 +251,7 @@ export default function ProfilePage() {
                       <p className="font-medium">Riwayat Deal</p>
                       <div className="space-y-2">
                         {investorData.deals.map((deal) => (
-                          <div
-                            key={deal.id}
-                            className="flex items-center justify-between p-3 rounded-lg border"
-                          >
+                          <div key={deal.id} className="flex items-center justify-between p-3 rounded-lg border">
                             <div>
                               <p className="font-medium">{deal.business.name}</p>
                               <p className="text-muted-foreground text-xs">
@@ -271,42 +272,19 @@ export default function ProfilePage() {
                     </>
                   )}
                   <div className="pt-2">
-                    <Button size="sm" onClick={() => router.push("/home")}>
-                      Ke Marketplace
-                    </Button>
+                    <Button size="sm" onClick={() => router.push("/home")}>Ke Marketplace</Button>
                   </div>
                 </>
               ) : (
                 <div className="space-y-3">
                   <p className="text-muted-foreground">Belum ada data investasi.</p>
-                  <Button size="sm" onClick={() => router.push("/home")}>
-                    Jelajahi Bisnis
-                  </Button>
+                  <Button size="sm" onClick={() => router.push("/home")}>Jelajahi Bisnis</Button>
                 </div>
               )}
             </CardContent>
           </Card>
         )}
       </div>
-    </div>
-  );
-}
-
-function Row({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string;
-  value: React.ReactNode;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className={`text-right break-all ${mono ? "font-mono text-xs" : ""}`}>
-        {value}
-      </span>
     </div>
   );
 }
