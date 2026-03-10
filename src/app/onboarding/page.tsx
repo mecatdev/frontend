@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { onboardingSchema, OnboardingInput, bsector, bsize, revenue, goal, years } from "@/lib/onboarding/schemas";
-import { submitOnboarding } from "@/api/onboarding";
+import { submitOnboarding } from "@/api/v1/voice/route";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";

@@ -6,12 +6,13 @@
  * - createVoiceSession: AI #1 - voice assistant (live respond)
  * - getDemoUserId: demo user untuk testing
  */
+import { getClerkToken } from "@/api/auth/clerk";
+
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.BACKEND_URL ||
   "http://localhost:4000";
-const API_BASE =
-  typeof window !== "undefined" ? "/api/backend" : `${BACKEND_URL}/api`;
+const API_BASE = `${BACKEND_URL}/api`;
 
 export interface Business {
   id: string;
@@ -33,11 +34,14 @@ export async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const token = await getClerkToken();
+
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers ?? {}),
     },
   });

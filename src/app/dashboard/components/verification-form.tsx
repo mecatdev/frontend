@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { verifySchema, VerifyInput, businessAseanLocation, businessStages } from "@/lib/verify/schemas";
-import { verifyBusiness, type BusinessVerificationStatus } from "@/api/businesses";
+import { verifyBusiness, type BusinessVerificationStatus } from "@/api/v1/business/route";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

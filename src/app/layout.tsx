@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import "@/app/globals.css";
 import { Poppins } from "next/font/google";
 
@@ -20,10 +21,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
-      <body className={`bg-white antialiased min-h-screen ${poppins.variable} font-sans`}>
-        {children}
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="id">
+        <body
+          className={`bg-white antialiased min-h-screen ${poppins.variable} font-sans`}
+        >
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
