@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: "Mecat",
   description:
     "AI powered investment marketplace connecting investors with vetted business and end-to-end guarantees for secure investments",
+  icons: { icon: "/logo.svg" },
 };
 
 export default function RootLayout({

@@ -1,8 +1,18 @@
 "use client";
 
-import { SignIn } from "@clerk/nextjs";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { SignIn, useUser } from "@clerk/nextjs";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { user, isLoaded } = useUser();
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (user) router.replace("/auth/redirect");
+  }, [isLoaded, user, router]);
+
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
       <div className="flex flex-col items-center gap-6 w-full max-w-sm">

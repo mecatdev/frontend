@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { SignUp } from "@clerk/nextjs";
+import { SignUp, useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { Building2, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,8 +31,15 @@ const roles: {
 
 function RegisterForm() {
   const params = useSearchParams();
+  const router = useRouter();
+  const { user, isLoaded } = useUser();
   const initial: UserRole = params.get("role") === "FOUNDER" ? "FOUNDER" : "INVESTOR";
   const [role, setRole] = useState<UserRole>(initial);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (user) router.replace("/auth/redirect");
+  }, [isLoaded, user, router]);
   const active = roles.find((r) => r.value === role)!;
 
   return (
