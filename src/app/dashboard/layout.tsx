@@ -1,22 +1,30 @@
-import { ReactNode } from "react";
+"use client";
+
+import type { ReactNode } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { DashboardSidebar } from "@/app/components/sidebar";
-import { AuthGuard } from "@/app/dashboard/components/auth-guard";
 
-type Props = {
-  children: ReactNode;
-};
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const { user, isLoaded } = useUser();
 
-export default function DashboardLayout({ children }: Props) {
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!user) router.replace("/auth/login");
+  }, [isLoaded, user, router]);
+
+  if (!isLoaded || !user) return null;
+
   return (
-    <AuthGuard>
-      <div className="flex min-h-screen">
-        <aside className="hidden md:block w-64">
-          <DashboardSidebar />
-        </aside>
-        <main className="flex-1 p-8 bg-muted/40">
-          {children}
-        </main>
-      </div>
-    </AuthGuard>
+    <div className="flex min-h-screen">
+      <aside className="hidden md:block w-64">
+        <DashboardSidebar />
+      </aside>
+      <main className="flex-1 p-8 bg-muted/40">
+        {children}
+      </main>
+    </div>
   );
 }

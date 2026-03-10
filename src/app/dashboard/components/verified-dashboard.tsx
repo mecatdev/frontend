@@ -1,174 +1,220 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { type MyBusiness } from "@/api/v1/business/route";
+import { apiFetch } from "@/lib/api";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import { CartesianGrid, Line, LineChart, XAxis } from "recharts";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 
-const chartData = [
-  { month: "January", investors: 4 },
-  { month: "February", investors: 6 },
-  { month: "March", investors: 3 },
-  { month: "April", investors: 5 },
-  { month: "Mei", investors: 8 },
-  { month: "June", investors: 9 },
-  { month: "July", investors: 11 },
-  { month: "August", investors: 12 },
-  { month: "September", investors: 14 },
-  { month: "October", investors: 12 },
-  { month: "Desember", investors: 16 },
-]
+interface Deal {
+  investor: { id: string; name: string; email: string; avatarUrl: string | null };
+  deal: {
+    id: string;
+    status: string;
+    investmentAmount: number | null;
+    equityPct: number | null;
+    createdAt: string;
+  };
+}
 
-const chartConfig = {
-  investors: {
-    label: "Deals",
-    color: "hsl(var(--primary))",
-  }
-} satisfies ChartConfig;
+function fmt(n: number | null, currency = "USD") {
+  if (n == null) return "—";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency, notation: "compact" }).format(n);
+}
+
+function statusColor(s: string) {
+  if (s === "SIGNED") return "text-green-700 bg-green-50";
+  if (s === "NEGOTIATING") return "text-yellow-700 bg-yellow-50";
+  if (s === "REJECTED") return "text-red-600 bg-red-50";
+  return "text-muted-foreground bg-muted";
+}
+
+interface InvestorListResponse {
+  data: Deal[];
+  total: number;
+  page: number;
+  limit: number;
+}
 
 export function VerifiedDashboard({ business }: { business: MyBusiness }) {
+  const router = useRouter();
+  const { getToken } = useAuth();
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isPublished, setIsPublished] = useState(business.isPublished);
+  const [toggling, setToggling] = useState(false);
+
+  useEffect(() => {
+    getToken()
+      .then((token) => apiFetch<InvestorListResponse>(`/businesses/${business.id}/investors`, {}, token))
+      .then((res) => setDeals(res.data ?? []))
+      .catch(() => setDeals([]))
+      .finally(() => setLoading(false));
+  }, [business.id, getToken]);
+
+  async function togglePublished() {
+    setToggling(true);
+    try {
+      const token = await getToken();
+      await apiFetch(`/businesses/${business.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isPublished: !isPublished }),
+      }, token);
+      setIsPublished((p) => !p);
+    } catch {
+      // silently fail
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  const totalDeals = deals.length;
+  const activeDeals = deals.filter((d) => ["NEGOTIATING", "SIGNED"].includes(d.deal.status)).length;
+  const totalFunding = deals
+    .filter((d) => d.deal.status === "SIGNED" && d.deal.investmentAmount)
+    .reduce((s, d) => s + (d.deal.investmentAmount ?? 0), 0);
+
   return (
-    <div className="min-h-screen p-8">
+    <div className="p-8">
       <div className="max-w-4xl mx-auto space-y-6">
+
+        {/* Header */}
         <div className="flex items-center gap-4">
-          <Image src="/logo.svg" alt="" width={40} height={40} />
+          <Image src={business.logoUrl ?? "/logo.svg"} alt="" width={44} height={44}
+            className="rounded-xl border" unoptimized />
           <div>
             <h1 className="text-2xl font-bold">{business.name}</h1>
-            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-              Verified
-            </span>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                Verified
+              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isPublished ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
+                {isPublished ? "Live di marketplace" : "Tidak dipublish"}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-xs px-2"
+                disabled={toggling}
+                onClick={togglePublished}
+              >
+                {toggling ? "..." : isPublished ? "Unpublish" : "Publish"}
+              </Button>
+            </div>
           </div>
         </div>
-        <p className="text-muted-foreground text-sm">
-          Your business is {business.isPublished ? "live on the marketplace." : "not yet published."}
-        </p>
-        <div className="grid grid-cols-3 gap-6">
+
+        {/* Stat cards */}
+        <div className="grid grid-cols-3 gap-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Deals Incoming</CardTitle>
-              <CardDescription>Checkout on your incoming deals from investor.</CardDescription>
+            <CardHeader className="pb-1">
+              <CardDescription>Total Investor</CardDescription>
+              <CardTitle className="text-3xl">{loading ? "—" : totalDeals}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-4 items-center">
-                {/* TODO:fetch recent deals */}
-                <p className="text-2xl">2</p>
-              </div>
-            </CardContent>
           </Card>
           <Card>
-            <CardHeader>
-              <CardTitle>Listed</CardTitle>
-              <CardDescription>Check out your listed investors interested on your business.</CardDescription>
+            <CardHeader className="pb-1">
+              <CardDescription>Deal Aktif</CardDescription>
+              <CardTitle className="text-3xl">{loading ? "—" : activeDeals}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-4 items-center">
-                {/* TODO: fetch listed investors */}
-                <p className="text-2xl">5</p>
-              </div>
-            </CardContent>
           </Card>
           <Card>
-            <CardHeader>
-              <CardTitle>Growth</CardTitle>
-              <CardDescription>Your business growth metrics. Based on deals overtime.</CardDescription>
+            <CardHeader className="pb-1">
+              <CardDescription>Funding Diterima</CardDescription>
+              <CardTitle className="text-2xl">{loading ? "—" : fmt(totalFunding)}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-4 items-center">
-                {/* TODO: fetch growth metrics */}
-                <p className="text-2xl">+25%</p>
-              </div>
-            </CardContent>
           </Card>
         </div>
-        <Card> 
+
+        {/* Business info */}
+        <Card>
           <CardHeader>
-            <CardTitle>Your Business Investors Growth</CardTitle>
-            <CardDescription>Track the growth of your business investors over time.</CardDescription>
+            <CardTitle className="text-base">Info Bisnis</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={chartConfig}
-              className="w-full"
-            >
-              <LineChart
-                accessibilityLayer
-                data={chartData}
-              >
-                <CartesianGrid vertical={false} />
-
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  interval={0}
-                  tickFormatter={(value) => value.slice(0, 3)}
-                />
-
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent />}
-                />
-
-                <Line
-                  type="monotone"
-                  dataKey="investors"
-                  dot={false}
-                  stroke="var(--color-investors)"
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ChartContainer>
+          <CardContent className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Industri</p>
+              <p className="font-medium">{business.industry ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Stage</p>
+              <p className="font-medium">{business.stage?.replace(/_/g, " ") ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Funding Ask</p>
+              <p className="font-medium">{fmt(business.fundingAsk, business.fundingCurrency ?? "USD")}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Tagline</p>
+              <p className="font-medium">{business.tagline ?? "—"}</p>
+            </div>
           </CardContent>
         </Card>
-        <div className="flex gap-4 items-center justify-between pt-8">
-          <h1 className="text-lg font-semibold">Your investors list</h1>
-          <Button
-          >
-            View all investors
-          </Button>
+
+        {/* Investor table */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-semibold">Daftar Investor</h2>
+            <Button size="sm" variant="outline"
+              onClick={() => router.push(`/dashboard/ai-configuration?businessId=${business.id}`)}>
+              Kelola AI Knowledge
+            </Button>
+          </div>
+          <Card className="rounded-xl">
+            {loading ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">Memuat...</div>
+            ) : deals.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                Belum ada investor yang terhubung.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Investor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Investasi</TableHead>
+                    <TableHead>Ekuitas</TableHead>
+                    <TableHead>Tanggal</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {deals.map((d) => (
+                    <TableRow key={d.deal.id}>
+                      <TableCell>
+                        <p className="font-medium text-sm">{d.investor.name}</p>
+                        <p className="text-xs text-muted-foreground">{d.investor.email}</p>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(d.deal.status)}`}>
+                          {d.deal.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {d.deal.investmentAmount ? fmt(d.deal.investmentAmount) : "—"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {d.deal.equityPct != null ? `${d.deal.equityPct}%` : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(d.deal.createdAt).toLocaleDateString("id-ID", {
+                          day: "numeric", month: "short", year: "numeric",
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
         </div>
-        <Card className="rounded-xl">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>No</TableHead>
-                <TableHead>Investor</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell>1</TableCell>
-                <TableCell>John Doe</TableCell>
-                <TableCell>Requested</TableCell>
-              </TableRow>
-            </TableBody>
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={2} className="font-semibold text-foreground">Total</TableCell>
-                <TableCell>1</TableCell>
-              </TableRow>
-            </TableFooter>
-          </Table>
-        </Card>
+
       </div>
     </div>
   );
