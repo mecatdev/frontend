@@ -17,8 +17,8 @@ import {
 
 const navItems = [
   { label: "Home", href: "/home", icon: Home },
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Mail", href: "/dashboard/mail", icon: Mail },
+  { label: "Dashboard", href: "/home/dashboard", icon: LayoutDashboard },
+  { label: "Mail", href: "/home/mail", icon: Mail },
 ];
 
 export function HomeSidebar() {
