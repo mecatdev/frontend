@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
-import { Home, LogOut } from "lucide-react";
+import { Home, Mail, Bot, User, Settings, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -18,18 +18,21 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { label: "Home", href: "/home", icon: Home },
-  { label: "Dashboard", href: "/home/dashboard", icon: Home },
+  { label: "Home", href: "/dashboard", icon: Home, exact: true },
+  { label: "Mail", href: "/dashboard/mail", icon: Mail, exact: false },
+  { label: "AI Configuration", href: "/dashboard/ai-configuration", icon: Bot, exact: false },
+  { label: "Profile", href: "/dashboard/profile", icon: User, exact: false },
+  { label: "Settings", href: "/dashboard/settings", icon: Settings, exact: false },
 ];
 
-export function HomeSidebar() {
+export function DashboardSidebar() {
   const pathname = usePathname();
   const { signOut } = useClerk();
 
   return (
     <Sidebar collapsible="none" className="!h-screen sticky top-0 border-r">
       <SidebarHeader className="items-center justify-center py-4">
-        <Link href="/home">
+        <Link href="/dashboard">
           <Image src="/logo.svg" alt="Mecat" width={28} height={28} />
         </Link>
       </SidebarHeader>
@@ -39,10 +42,9 @@ export function HomeSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const isActive =
-                  item.href === "/home"
-                    ? pathname === item.href
-                    : pathname.startsWith(item.href);
+                const isActive = item.exact
+                  ? pathname === item.href
+                  : pathname.startsWith(item.href);
 
                 return (
                   <SidebarMenuItem key={item.href}>
