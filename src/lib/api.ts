@@ -7,26 +7,13 @@
  * - getDemoUserId: demo user untuk testing
  */
 import { getClerkToken } from "@/api/auth/clerk";
+import type { Business, BusinessDetail } from "@/types/business";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.BACKEND_URL ||
   "http://localhost:4000";
 const API_BASE = `${BACKEND_URL}/api`;
-
-export interface Business {
-  id: string;
-  name: string;
-  slug: string;
-  tagline: string | null;
-  description: string | null;
-  industry: string | null;
-  marketSize: string | null;
-  fundingAsk: number | string | null;
-  fundingCurrency: string | null;
-  logoUrl: string | null;
-  owner: { id: string; name: string; avatarUrl: string | null };
-}
 
 // --- Generic authenticated fetch ---
 
@@ -48,6 +35,29 @@ export async function apiFetch<T>(
   const json = await res.json();
   if (!res.ok || !json.success) {
     const err = new Error(json.error || "Request failed") as Error & { status: number };
+    err.status = res.status;
+    throw err;
+  }
+  return json.data;
+}
+
+export async function apiUpload<T>(
+  endpoint: string,
+  formData: FormData,
+): Promise<T> {
+  const token = await getClerkToken();
+
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    const err = new Error(json.error || "Upload failed") as Error & { status: number };
     err.status = res.status;
     throw err;
   }
@@ -102,7 +112,7 @@ export async function fetchBusinesses(): Promise<Business[]> {
 
 export async function fetchBusiness(
   idOrSlug: string
-): Promise<Business & { traction?: unknown; revenue?: unknown; teamInfo?: unknown }> {
+): Promise<BusinessDetail> {
   const res = await fetch(
     `${API_BASE}/businesses/${encodeURIComponent(idOrSlug)}`,
     { cache: "no-store" }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MasonryGrid } from "./components/masonry-grid";
@@ -8,8 +8,6 @@ import { fetchBusinessPage } from "./data";
 import { businessSectors, type bsector } from "@/lib/onboarding/schemas";
 import { cn } from "@/lib/utils";
 import type { Business } from "@/types/business";
-
-const lazy_fetch = 400;
 
 export default function HomePage() {
   const [query, setQuery] = useState("");
@@ -34,40 +32,58 @@ export default function HomePage() {
     setHasMore(true);
     setIsLoading(true);
 
-    const timer = setTimeout(() => {
-      if (cancelled) return;
-      const result = fetchBusinessPage(0, sector, debouncedQuery);
-      setBusinesses(result.businesses);
-      setHasMore(result.hasMore);
-      setIsLoading(false);
-    }, lazy_fetch);
+    fetchBusinessPage(0, sector)
+      .then((result) => {
+        if (cancelled) return;
+        setBusinesses(result.businesses);
+        setHasMore(result.hasMore);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setBusinesses([]);
+        setHasMore(false);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
 
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
-  }, [sector, debouncedQuery]);
+  }, [sector]);
 
   const loadMore = useCallback(() => {
     if (!hasMore || isFetchingMore || isLoading) return;
     setIsFetchingMore(true);
 
     const nextPage = page + 1;
-    setTimeout(() => {
-      const result = fetchBusinessPage(nextPage, sector, debouncedQuery);
-      setBusinesses((prev) => [...prev, ...result.businesses]);
-      setPage(nextPage);
-      setHasMore(result.hasMore);
-      setIsFetchingMore(false);
-    }, lazy_fetch);
-  }, [hasMore, isFetchingMore, isLoading, page, sector, debouncedQuery]);
+    fetchBusinessPage(nextPage, sector)
+      .then((result) => {
+        setBusinesses((prev) => [...prev, ...result.businesses]);
+        setPage(nextPage);
+        setHasMore(result.hasMore);
+      })
+      .catch(() => setHasMore(false))
+      .finally(() => setIsFetchingMore(false));
+  }, [hasMore, isFetchingMore, isLoading, page, sector]);
+
+  const displayedBusinesses = useMemo(() => {
+    if (!debouncedQuery.trim()) return businesses;
+    const q = debouncedQuery.toLowerCase();
+    return businesses.filter(
+      (b) =>
+        b.name.toLowerCase().includes(q) ||
+        (b.tagline?.toLowerCase().includes(q) ?? false) ||
+        (b.industry?.toLowerCase().includes(q) ?? false),
+    );
+  }, [businesses, debouncedQuery]);
 
   return (
     <div className="min-h-screen flex flex-col items-center gap-6 px-12 py-4 mx-auto w-full">
       <div className="w-full rounded-xl border flex gap-2 bg-secondary px-4 py-2 items-center">
         <Search size={15} />
         <Input
-          placeholder="Search by name, industry, or location..."
+          placeholder="Search businesses..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="bg-transparent border-none shadow-none"
@@ -92,10 +108,10 @@ export default function HomePage() {
       </div>
 
       <MasonryGrid
-        businesses={businesses}
+        businesses={displayedBusinesses}
         isLoading={isLoading}
         isFetchingMore={isFetchingMore}
-        hasMore={hasMore}
+        hasMore={hasMore && !debouncedQuery.trim()}
         onLoadMore={loadMore}
       />
     </div>

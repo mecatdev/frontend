@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
-import { DashboardSidebar } from "@/app/components/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { DashboardSidebar } from "@/app/dashboard/components/sidebar";
 import { AuthGuard } from "@/app/dashboard/components/auth-guard";
 
 type Props = {
@@ -9,14 +10,22 @@ type Props = {
 export default function DashboardLayout({ children }: Props) {
   return (
     <AuthGuard>
-      <div className="flex min-h-screen">
-        <aside className="hidden md:block w-64">
-          <DashboardSidebar />
-        </aside>
-        <main className="flex-1 p-8 bg-muted/40">
-          {children}
-        </main>
-      </div>
+      <SidebarProvider
+        defaultOpen={false}
+        style={
+          {
+            "--sidebar-width": "3.5rem",
+            "--sidebar-width-icon": "3.5rem",
+          } as React.CSSProperties
+        }
+      >
+        <DashboardSidebar />
+        <SidebarInset>
+          <main className="bg-muted/40 min-h-screen">
+            {children}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
     </AuthGuard>
   );
 }

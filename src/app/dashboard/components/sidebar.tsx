@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
-import { Home, Mail, LogOut } from "lucide-react";
+import { Home, Mail, Brain, User, Settings, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,11 +20,14 @@ import {
 import { apiFetch } from "@/lib/api";
 
 const navItems = [
-  { label: "Home", href: "/home", icon: Home },
-  { label: "Mail", href: "/home/mail", icon: Mail },
+  { label: "Home", href: "/dashboard", icon: Home, exact: true },
+  { label: "Mail", href: "/dashboard/mail", icon: Mail, exact: false },
+  { label: "AI Configuration", href: "/dashboard/ai-configuration", icon: Brain, exact: false },
+  { label: "Profile", href: "/dashboard/profile", icon: User, exact: false },
+  { label: "Settings", href: "/dashboard/settings", icon: Settings, exact: false },
 ];
 
-export function HomeSidebar() {
+export function DashboardSidebar() {
   const pathname = usePathname();
   const { signOut } = useClerk();
   const [unread, setUnread] = useState(0);
@@ -46,7 +49,7 @@ export function HomeSidebar() {
   return (
     <Sidebar collapsible="none" className="!h-screen sticky top-0 border-r">
       <SidebarHeader className="items-center justify-center py-4">
-        <Link href="/home">
+        <Link href="/dashboard">
           <Image src="/logo.svg" alt="Mecat" width={28} height={28} />
         </Link>
       </SidebarHeader>
@@ -56,12 +59,11 @@ export function HomeSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const isActive =
-                  item.href === "/home"
-                    ? pathname === item.href
-                    : pathname.startsWith(item.href);
+                const isActive = item.exact
+                  ? pathname === item.href
+                  : pathname.startsWith(item.href);
 
-                const showBadge = item.href === "/home/mail" && unread > 0;
+                const showBadge = item.href === "/dashboard/mail" && unread > 0;
 
                 return (
                   <SidebarMenuItem key={item.href}>

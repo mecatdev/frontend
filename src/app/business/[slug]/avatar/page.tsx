@@ -2,9 +2,10 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { notFound } from "next/navigation";
-import { getBusinessBySlug } from "@/app/home/data";
+import { apiFetch } from "@/lib/api";
+import type { BusinessDetail } from "@/types/business";
 import { useAudioAnalyzer } from "@/hooks/use-audio-analyzer";
 import { AudioWave } from "./components/wave";
 import { ChatPanel, type ChatMessage } from "./components/chat-panel";
@@ -64,11 +65,17 @@ function useCallTimer(isActive: boolean) {
 export default function AvatarPage({ params }: Props) {
   const { slug } = use(params);
   const router = useRouter();
-  const business = getBusinessBySlug(slug);
-  if (!business) notFound();
-
+  const [business, setBusiness] = useState<BusinessDetail | null>(null);
+  const [error, setError] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEndCallOpen, setIsEndCallOpen] = useState(false);
+
+  useEffect(() => {
+    apiFetch<BusinessDetail>(`/businesses/${encodeURIComponent(slug)}`)
+      .then(setBusiness)
+      .catch(() => setError(true));
+  }, [slug]);
+
   const audio = useAudioAnalyzer();
   const messages = useDemoMessages(audio.isActive);
   const timer = useCallTimer(audio.isActive);
@@ -82,6 +89,16 @@ export default function AvatarPage({ params }: Props) {
     setIsEndCallOpen(false);
     router.push(`/business/${slug}`);
   }, [router, slug]);
+
+  if (error) notFound();
+
+  if (!business) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   const statusText = audio.isActive
     ? audio.amplitude > 0.15
@@ -151,7 +168,9 @@ export default function AvatarPage({ params }: Props) {
 
       <EndCallDialog
         open={isEndCallOpen}
+        businessId={business.id}
         businessName={business.name}
+        businessOwnerId={business.ownerId}
         onComplete={handleComplete}
       />
     </div>

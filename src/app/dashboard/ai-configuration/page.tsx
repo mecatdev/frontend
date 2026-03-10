@@ -117,18 +117,18 @@ export default function AIConfigurationPage() {
                       key={chunk.id}
                       className="flex items-start justify-between gap-4 p-4 rounded-xl border bg-muted/30"
                     >
-                      <div className="space-y-1 min-w-0">
-                        <Badge variant="secondary" className="text-xs">
+                      <div className="space-y-4 min-w-0">
+                        <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
                           {chunk.sourceLabel}
                         </Badge>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                        <p className="text-sm text-muted-foreground line-clamp-2">
                           {chunk.content}
                         </p>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0"
+                        className="text-primary/80 hover:text-primary bg-primary/10 hover:bg-primary/20 shrink-0"
                         onClick={() => handleDelete(chunk.id)}
                       >
                         Delete
