@@ -32,9 +32,10 @@ export interface Business {
 
 export async function apiFetch<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  tokenOverride?: string | null
 ): Promise<T> {
-  const token = await getClerkToken();
+  const token = tokenOverride !== undefined ? tokenOverride : await getClerkToken();
 
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,

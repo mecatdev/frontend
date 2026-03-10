@@ -25,7 +25,6 @@ const statusBadge: Partial<Record<BusinessVerificationStatus, { label: string; c
 
 export function VerificationForm({ status }: { status: BusinessVerificationStatus }) {
   const router = useRouter();
-  const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,27 +38,15 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
     setError(null);
     try {
       await verifyBusiness(data);
-      setSubmitted(true);
+      // hard reload so useMyBusiness() re-fetches fresh status from backend
+      window.location.replace("/dashboard");
+      return;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Verification failed");
     } finally {
       setLoading(false);
     }
   };
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-6">
-        <div className="text-center space-y-4">
-          <h2 className="text-2xl font-bold">Verification submitted!</h2>
-          <p className="text-muted-foreground">
-            Your business will be reviewed and listed on the marketplace once verified.
-          </p>
-          <Button onClick={() => router.push("/dashboard/home")}>Go to Dashboard</Button>
-        </div>
-      </div>
-    );
-  }
 
   const badge = statusBadge[status];
 
@@ -196,7 +183,7 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
           <Button
             variant="ghost"
             className="text-muted-foreground text-sm"
-            onClick={() => router.push("/dashboard/home")}
+            onClick={() => router.push("/dashboard")}
           >
             Skip for now
           </Button>
