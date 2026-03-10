@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { Home, LayoutDashboard, Mail, Bot, Settings } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Home, LayoutDashboard, Mail, User, LogOut } from "lucide-react";
+import { useClerk } from "@clerk/nextjs";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -19,10 +21,18 @@ const navItems = [
   { label: "Home", href: "/home", icon: Home },
   { label: "Dashboard", href: "/home/dashboard", icon: LayoutDashboard },
   { label: "Mail", href: "/home/mail", icon: Mail },
+  { label: "Profile", href: "/home/profile", icon: User },
 ];
 
 export function HomeSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { signOut } = useClerk();
+
+  const handleLogout = async () => {
+    await signOut();
+    router.push("/auth/login");
+  };
 
   return (
     <Sidebar collapsible="none" className="!h-screen sticky top-0 border-r">
@@ -61,6 +71,20 @@ export function HomeSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="pb-4">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Logout"
+              className="justify-center text-red-500 hover:text-red-600"
+              onClick={handleLogout}
+            >
+              <LogOut />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }

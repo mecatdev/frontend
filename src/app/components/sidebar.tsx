@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { useClerk } from "@clerk/nextjs";
 
 const menuItems = [
   { label: "Home", href: "/dashboard", icon: Home },
@@ -19,9 +20,10 @@ const menuItems = [
 export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { signOut } = useClerk();
 
   const handleLogout = async () => {
-    // TODO: clear auth token / session
+    await signOut();
     router.push("/auth/login");
   };
 
