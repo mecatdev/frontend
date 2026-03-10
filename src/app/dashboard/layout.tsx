@@ -21,7 +21,7 @@ export default function DashboardLayout({ children }: Props) {
       >
         <DashboardSidebar />
         <SidebarInset>
-          <main className="p-8 bg-muted/40 min-h-screen">
+          <main className="bg-muted/40 min-h-screen">
             {children}
           </main>
         </SidebarInset>

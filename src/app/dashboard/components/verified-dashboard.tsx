@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { type MyBusiness } from "@/api/v1/business/route";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,40 +14,78 @@ import { CartesianGrid, Line, LineChart, XAxis } from "recharts";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Check, Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
+
+type InvestorDeal = {
+  investor: { id: string; name: string; email: string; avatarUrl: string | null };
+  deal: { id: string; status: string; createdAt: string };
+};
 
 const chartData = [
   { month: "January", investors: 4 },
   { month: "February", investors: 6 },
   { month: "March", investors: 3 },
   { month: "April", investors: 5 },
-  { month: "Mei", investors: 8 },
+  { month: "May", investors: 8 },
   { month: "June", investors: 9 },
   { month: "July", investors: 11 },
   { month: "August", investors: 12 },
   { month: "September", investors: 14 },
   { month: "October", investors: 12 },
-  { month: "Desember", investors: 16 },
-]
+  { month: "December", investors: 16 },
+];
 
 const chartConfig = {
   investors: {
     label: "Deals",
     color: "hsl(var(--primary))",
-  }
+  },
 } satisfies ChartConfig;
 
 export function VerifiedDashboard({ business }: { business: MyBusiness }) {
+  const [investors, setInvestors] = useState<InvestorDeal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiFetch<InvestorDeal[]>(`/businesses/${business.id}/investors`)
+      .then(setInvestors)
+      .catch(() => setInvestors([]))
+      .finally(() => setLoading(false));
+  }, [business.id]);
+
+  const handleApprove = async (dealId: string) => {
+    setApprovingId(dealId);
+    try {
+      await apiFetch(`/deals/${dealId}/approve`, { method: "PATCH" });
+      setInvestors((prev) =>
+        prev.map((item) =>
+          item.deal.id === dealId
+            ? { ...item, deal: { ...item.deal, status: "NEGOTIATING" } }
+            : item,
+        ),
+      );
+    } catch {
+      // ignore
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const draftCount = investors.filter((i) => i.deal.status === "DRAFT").length;
+  const totalCount = investors.length;
+
   return (
     <div className="min-h-screen p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Image src="/logo.svg" alt="" width={40} height={40} />
           <div>
@@ -63,56 +102,40 @@ export function VerifiedDashboard({ business }: { business: MyBusiness }) {
           <Card>
             <CardHeader>
               <CardTitle>Deals Incoming</CardTitle>
-              <CardDescription>Checkout on your incoming deals from investor.</CardDescription>
+              <CardDescription>Pending deals from investors.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4 items-center">
-                {/* TODO:fetch recent deals */}
-                <p className="text-2xl">2</p>
-              </div>
+              <p className="text-2xl">{draftCount}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
               <CardTitle>Listed</CardTitle>
-              <CardDescription>Check out your listed investors interested on your business.</CardDescription>
+              <CardDescription>Total investors interested.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4 items-center">
-                {/* TODO: fetch listed investors */}
-                <p className="text-2xl">5</p>
-              </div>
+              <p className="text-2xl">{totalCount}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
               <CardTitle>Growth</CardTitle>
-              <CardDescription>Your business growth metrics. Based on deals overtime.</CardDescription>
+              <CardDescription>Deals over time.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4 items-center">
-                {/* TODO: fetch growth metrics */}
-                <p className="text-2xl">+25%</p>
-              </div>
+              <p className="text-2xl">+{totalCount > 0 ? Math.round((draftCount / totalCount) * 100) : 0}%</p>
             </CardContent>
           </Card>
         </div>
-        <Card> 
+        <Card>
           <CardHeader>
             <CardTitle>Your Business Investors Growth</CardTitle>
             <CardDescription>Track the growth of your business investors over time.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={chartConfig}
-              className="w-full"
-            >
-              <LineChart
-                accessibilityLayer
-                data={chartData}
-              >
+            <ChartContainer config={chartConfig} className="w-full">
+              <LineChart accessibilityLayer data={chartData}>
                 <CartesianGrid vertical={false} />
-
                 <XAxis
                   dataKey="month"
                   tickLine={false}
@@ -121,12 +144,7 @@ export function VerifiedDashboard({ business }: { business: MyBusiness }) {
                   interval={0}
                   tickFormatter={(value) => value.slice(0, 3)}
                 />
-
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent />}
-                />
-
+                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
                 <Line
                   type="monotone"
                   dataKey="investors"
@@ -138,13 +156,11 @@ export function VerifiedDashboard({ business }: { business: MyBusiness }) {
             </ChartContainer>
           </CardContent>
         </Card>
+
         <div className="flex gap-4 items-center justify-between pt-8">
           <h1 className="text-lg font-semibold">Your investors list</h1>
-          <Button
-          >
-            View all investors
-          </Button>
         </div>
+
         <Card className="rounded-xl">
           <Table>
             <TableHeader>
@@ -152,21 +168,62 @@ export function VerifiedDashboard({ business }: { business: MyBusiness }) {
                 <TableHead>No</TableHead>
                 <TableHead>Investor</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell>1</TableCell>
-                <TableCell>John Doe</TableCell>
-                <TableCell>Requested</TableCell>
-              </TableRow>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8">
+                    <Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
+              ) : investors.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground text-sm">
+                    No investors yet.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                investors.map((item, idx) => (
+                  <TableRow key={item.deal.id}>
+                    <TableCell>{idx + 1}</TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="text-sm font-medium">{item.investor.name}</p>
+                        <p className="text-xs text-muted-foreground">{item.investor.email}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={item.deal.status === "DRAFT" ? "secondary" : "default"}
+                        className="text-xs"
+                      >
+                        {item.deal.status === "DRAFT" ? "Requested" : item.deal.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {item.deal.status === "DRAFT" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          disabled={approvingId === item.deal.id}
+                          onClick={() => handleApprove(item.deal.id)}
+                        >
+                          {approvingId === item.deal.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Check size={12} />
+                          )}
+                          Approve
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={2} className="font-semibold text-foreground">Total</TableCell>
-                <TableCell>1</TableCell>
-              </TableRow>
-            </TableFooter>
           </Table>
         </Card>
       </div>

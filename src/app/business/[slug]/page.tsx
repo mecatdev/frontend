@@ -134,7 +134,12 @@ export default function BusinessDetailPage({ params }: Props) {
           <Button
             size="lg"
             className="w-full gap-2"
-            onClick={() => router.push(`/business/${slug}/avatar`)}
+            onClick={async () => {
+              apiFetch(`/businesses/${business.id}/interview-started`, {
+                method: "POST",
+              }).catch(() => {});
+              router.push(`/business/${slug}/avatar`);
+            }}
           >
             <Video size={16} />
             Go Interview

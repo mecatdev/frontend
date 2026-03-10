@@ -41,6 +41,29 @@ export async function apiFetch<T>(
   return json.data;
 }
 
+export async function apiUpload<T>(
+  endpoint: string,
+  formData: FormData,
+): Promise<T> {
+  const token = await getClerkToken();
+
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    const err = new Error(json.error || "Upload failed") as Error & { status: number };
+    err.status = res.status;
+    throw err;
+  }
+  return json.data;
+}
+
 // --- Contract Analysis (AI #2) ---
 
 export interface ContractAnalysisResult {

@@ -12,7 +12,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 const TOTAL_STEPS = 3;
 
@@ -27,20 +28,66 @@ Best regards,
 
 interface EndCallDialogProps {
   open: boolean;
+  businessId: string;
   businessName: string;
+  businessOwnerId: string;
   onComplete: () => void;
 }
 
-export function EndCallDialog({ open, businessName, onComplete }: EndCallDialogProps) {
+export function EndCallDialog({
+  open,
+  businessId,
+  businessName,
+  businessOwnerId,
+  onComplete,
+}: EndCallDialogProps) {
   const [step, setStep] = useState(1);
   const [interested, setInterested] = useState<boolean | null>(null);
   const [emailBody, setEmailBody] = useState(EMAIL_TEMPLATE);
+  const [sending, setSending] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const progress = (step / TOTAL_STEPS) * 100;
 
   const next = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   const back = () => setStep((s) => Math.max(s - 1, 1));
+
+  const handleInterest = async (v: boolean) => {
+    setInterested(v);
+    if (v) {
+      try {
+        await apiFetch("/deals", {
+          method: "POST",
+          body: JSON.stringify({ businessId }),
+        });
+      } catch {
+        // deal may already exist
+      }
+    }
+    next();
+  };
+
+  const handleSendMail = async () => {
+    setSending(true);
+    try {
+      await apiFetch("/mails", {
+        method: "POST",
+        body: JSON.stringify({
+          recipientId: businessOwnerId,
+          businessId,
+          subject: interested
+            ? `Investment Interest — ${businessName}`
+            : `Follow-up — ${businessName}`,
+          body: emailBody,
+        }),
+      });
+    } catch {
+      // continue even on error
+    } finally {
+      setSending(false);
+      next();
+    }
+  };
 
   const handleEnjoy = (_: boolean) => onComplete();
 
@@ -74,7 +121,7 @@ export function EndCallDialog({ open, businessName, onComplete }: EndCallDialogP
             <Step1
               businessName={businessName}
               value={interested}
-              onChange={(v) => { setInterested(v); next(); }}
+              onChange={handleInterest}
             />
           )}
           {step === 2 && (
@@ -82,7 +129,8 @@ export function EndCallDialog({ open, businessName, onComplete }: EndCallDialogP
               emailBody={emailBody}
               onEmailChange={setEmailBody}
               fileRef={fileRef}
-              onNext={next}
+              onNext={handleSendMail}
+              sending={sending}
             />
           )}
           {step === 3 && (
@@ -132,11 +180,13 @@ function Step2({
   onEmailChange,
   fileRef,
   onNext,
+  sending,
 }: {
   emailBody: string;
   onEmailChange: (v: string) => void;
   fileRef: React.RefObject<HTMLInputElement | null>;
   onNext: () => void;
+  sending: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -179,8 +229,8 @@ function Step2({
           />
         </div>
       </div>
-      <Button className="w-full h-12 rounded-xl" onClick={onNext}>
-        Continue
+      <Button className="w-full h-12 rounded-xl" onClick={onNext} disabled={sending}>
+        {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send & Continue"}
       </Button>
     </div>
   );

@@ -21,6 +21,7 @@ export type Business = {
 };
 
 export type BusinessDetail = Business & {
+  ownerId: string;
   description: string | null;
   websiteUrl: string | null;
   updatedAt: string;

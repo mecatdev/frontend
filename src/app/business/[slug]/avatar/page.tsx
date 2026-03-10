@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import type { Business } from "@/types/business";
+import type { BusinessDetail } from "@/types/business";
 import { useAudioAnalyzer } from "@/hooks/use-audio-analyzer";
 import { AudioWave } from "./components/wave";
 import { ChatPanel, type ChatMessage } from "./components/chat-panel";
@@ -65,13 +65,13 @@ function useCallTimer(isActive: boolean) {
 export default function AvatarPage({ params }: Props) {
   const { slug } = use(params);
   const router = useRouter();
-  const [business, setBusiness] = useState<Business | null>(null);
+  const [business, setBusiness] = useState<BusinessDetail | null>(null);
   const [error, setError] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEndCallOpen, setIsEndCallOpen] = useState(false);
 
   useEffect(() => {
-    apiFetch<Business>(`/businesses/${encodeURIComponent(slug)}`)
+    apiFetch<BusinessDetail>(`/businesses/${encodeURIComponent(slug)}`)
       .then(setBusiness)
       .catch(() => setError(true));
   }, [slug]);
@@ -168,7 +168,9 @@ export default function AvatarPage({ params }: Props) {
 
       <EndCallDialog
         open={isEndCallOpen}
+        businessId={business.id}
         businessName={business.name}
+        businessOwnerId={business.ownerId}
         onComplete={handleComplete}
       />
     </div>
