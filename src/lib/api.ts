@@ -95,22 +95,13 @@ export async function createVoiceSession(businessId: string, userId: string) {
 // --- Marketplace ---
 
 export async function fetchBusinesses(): Promise<Business[]> {
-  const res = await fetch(`${API_BASE}/businesses`, { cache: "no-store" });
-  const json = await res.json();
-  if (!json.success) throw new Error(json.error || "Failed to fetch businesses");
-  return json.data ?? [];
+  return apiFetch<Business[]>("/businesses");
 }
 
 export async function fetchBusiness(
   idOrSlug: string
 ): Promise<Business & { traction?: unknown; revenue?: unknown; teamInfo?: unknown }> {
-  const res = await fetch(
-    `${API_BASE}/businesses/${encodeURIComponent(idOrSlug)}`,
-    { cache: "no-store" }
-  );
-  const json = await res.json();
-  if (!json.success) throw new Error(json.error || "Failed to fetch business");
-  return json.data;
+  return apiFetch(`/businesses/${encodeURIComponent(idOrSlug)}`);
 }
 
 export async function getDemoUserId(): Promise<string> {
