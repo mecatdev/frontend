@@ -154,3 +154,56 @@ export const ALL_BUSINESSES: Business[] = [...DISCOVERY_BUSINESSES, ...TRENDING_
 export function getBusinessBySlug(slug: string): Business | undefined {
   return ALL_BUSINESSES.find((b) => b.slug === slug);
 }
+
+const PAGE_SIZE = 4;
+const MIN_FOR_INFINITE = 4;
+
+export type BusinessPage = {
+  businesses: Business[];
+  hasMore: boolean;
+};
+
+export function fetchBusinessPage(
+  page: number,
+  sector?: string | null,
+  query?: string,
+): BusinessPage {
+  let filtered: Business[] = ALL_BUSINESSES;
+
+  if (query && query.trim()) {
+    const q = query.trim().toLowerCase();
+    filtered = filtered.filter(
+      (b) =>
+        b.name.toLowerCase().includes(q) ||
+        b.industry.toLowerCase().includes(q) ||
+        b.description.toLowerCase().includes(q) ||
+        b.location.toLowerCase().includes(q),
+    );
+  }
+
+  if (sector) {
+    filtered = filtered.filter((b) => b.industry === sector);
+  }
+
+  const total = filtered.length;
+  if (total === 0) return { businesses: [], hasMore: false };
+
+  const isInfinite = total >= MIN_FOR_INFINITE;
+
+  if (!isInfinite) {
+    const start = page * PAGE_SIZE;
+    return {
+      businesses: filtered.slice(start, start + PAGE_SIZE),
+      hasMore: start + PAGE_SIZE < total,
+    };
+  }
+
+  const start = page * PAGE_SIZE;
+  const businesses: Business[] = [];
+  for (let i = 0; i < PAGE_SIZE; i++) {
+    const src = filtered[(start + i) % total];
+    businesses.push({ ...src, id: `${src.id}_p${page}_${i}` });
+  }
+
+  return { businesses, hasMore: true };
+}

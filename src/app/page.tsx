@@ -14,7 +14,7 @@ export default function LandingPage() {
         <div className="text-center space-y-3">
             <h1 className="text-4xl font-bold tracking-tight">Mecat</h1>
             <p className="text-muted-foreground text-base max-w-sm">
-            AI-powered investment marketplace — connecting founders with the right investors.
+                AI-powered investment marketplace — connecting founders with the right investors.
             </p>
         </div>
         <div className="flex gap-3">

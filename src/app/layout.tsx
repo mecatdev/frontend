@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import "@/app/globals.css";
-import { Lato } from "next/font/google";
+import { Poppins } from "next/font/google";
 
-const lato = Lato({
+const poppins = Poppins({
   subsets: ["latin"],
-  variable: "--font-lato",
+  variable: "--font-poppins",
   weight: ["400", "700"],
 });
 
@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className={`bg-background antialiased min-h-screen ${lato.variable} font-sans`}>
+      <body className={`bg-white antialiased min-h-screen ${poppins.variable} font-sans`}>
         {children}
       </body>
     </html>
