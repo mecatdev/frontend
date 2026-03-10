@@ -1,6 +1,6 @@
 "use client";
 
-import { type MyBusiness } from "@/api/businesses";
+import { type MyBusiness } from "@/api/v1/business/route";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {

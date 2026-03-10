@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { MyBusiness } from "@/api/businesses";
+import type { MyBusiness } from "@/api/v1/business/route";
 
 const BusinessContext = createContext<MyBusiness | null>(null);
 

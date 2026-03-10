@@ -11,19 +11,31 @@ type Props = {
 
 export function AuthGuard({ children }: Props) {
   const router = useRouter();
-  const { business, error, loading, isUnauthenticated } = useMyBusiness();
+  const { business, error, loading, isUnauthenticated, isNotFound } = useMyBusiness();
 
   useEffect(() => {
     if (loading) return;
-    if (isUnauthenticated || error || !business) {
-      router.replace("/");
+    if (isUnauthenticated) {
+      router.replace("/auth/login");
+      return;
     }
-  }, [loading, error, business, isUnauthenticated, router]);
+    if (isNotFound) {
+      router.replace("/onboarding");
+    }
+  }, [loading, isUnauthenticated, isNotFound, router]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground text-sm">Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground text-sm">{error}</p>
       </div>
     );
   }
