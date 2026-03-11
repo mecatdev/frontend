@@ -28,13 +28,17 @@ export async function getMyBusiness(): Promise<MyBusiness> {
   return apiFetch<MyBusiness>("/businesses/me");
 }
 
-export async function verifyBusiness(data: VerifyInput): Promise<VerifyBusinessResponse> {
+export async function verifyBusiness(data: VerifyInput, businessId?: string): Promise<VerifyBusinessResponse> {
   return apiFetch<VerifyBusinessResponse>("/businesses/verify", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, businessId }),
   });
 }
 
 export async function getBusiness(idOrSlug: string): Promise<MyBusiness> {
   return apiFetch<MyBusiness>(`/businesses/${idOrSlug}`);
+}
+
+export async function getMyBusinesses(token?: string | null): Promise<MyBusiness[]> {
+  return apiFetch<MyBusiness[]>("/businesses/mine", {}, token);
 }

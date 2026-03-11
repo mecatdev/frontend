@@ -23,7 +23,13 @@ const statusBadge: Partial<Record<BusinessVerificationStatus, { label: string; c
   REJECTED: { label: "Rejected — please resubmit", color: "text-red-600 bg-red-50"     },
 };
 
-export function VerificationForm({ status }: { status: BusinessVerificationStatus }) {
+interface Props {
+  businessId: string;
+  status: BusinessVerificationStatus;
+  onSuccess: () => void;
+}
+
+export function VerificationFormById({ businessId, status, onSuccess }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,10 +43,8 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
     setLoading(true);
     setError(null);
     try {
-      await verifyBusiness(data);
-      // hard reload so useMyBusiness() re-fetches fresh status from backend
-      window.location.replace("/dashboard");
-      return;
+      await verifyBusiness(data, businessId);
+      onSuccess();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Verification failed");
     } finally {
@@ -185,7 +189,7 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
             className="text-muted-foreground text-sm"
             onClick={() => router.push("/dashboard")}
           >
-            Skip for now
+            Back to Dashboard
           </Button>
           <Button className="py-5 px-20" disabled={loading} onClick={form.handleSubmit(onSubmit)}>
             {loading ? "Submitting..." : "Verify"}
