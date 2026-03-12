@@ -48,8 +48,8 @@ export default function AIConfigurationPage() {
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(urlBusinessId);
 
   useEffect(() => {
-    getToken().then((token) => getMyBusinesses(token)).then(setBusinesses).catch(() => {});
-  }, [getToken]);
+    getMyBusinesses().then(setBusinesses).catch(() => {});
+  }, []);
 
   // If URL param changes (e.g. navigation), sync state
   useEffect(() => {
@@ -153,7 +153,6 @@ export default function AIConfigurationPage() {
           method: "POST",
           body: JSON.stringify({ content: textContent.trim(), sourceLabel: label }),
         },
-        token
       );
       setUploadMsg({ type: "ok", text: `Berhasil ditambahkan ke "${label}"` });
       setTextContent("");

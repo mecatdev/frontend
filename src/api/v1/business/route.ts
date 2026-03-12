@@ -39,6 +39,15 @@ export async function getBusiness(idOrSlug: string): Promise<MyBusiness> {
   return apiFetch<MyBusiness>(`/businesses/${idOrSlug}`);
 }
 
-export async function getMyBusinesses(token?: string | null): Promise<MyBusiness[]> {
-  return apiFetch<MyBusiness[]>("/businesses/mine", {}, token);
+export async function getMyBusinesses(): Promise<MyBusiness[]> {
+  try {
+    const business = await getMyBusiness();
+    return [business];
+  } catch (e) {
+    const status = (e as Error & { status?: number }).status;
+    if (status === 404) {
+      return [];
+    }
+    throw e;
+  }
 }

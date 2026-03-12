@@ -19,8 +19,10 @@ export type BusinessStage = (typeof businessStages)[number];
 const imgTypes = ["image/jpeg", "image/png", "image/gif"] as const;
 
 export const verifySchema = z.object({
-  ownerName: z.string().min(2, "Owner name must be at least 2 characters"),
-  businessLocation: z.enum(businessAseanLocation, { message: "Please select a valid country" }),
+  ownerName: z.string().min(1, "Please tell us your name"),
+  businessLocation: z.enum(businessAseanLocation, { 
+    message: "Please select a valid country" 
+  }),
   businessDescription: z
     .string()
     .min(10, "Description must be at least 10 characters")

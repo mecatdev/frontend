@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -17,6 +16,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import Image from "next/image";
+import { TriangleAlert } from "lucide-react";
 
 const statusBadge: Partial<Record<BusinessVerificationStatus, { label: string; color: string }>> = {
   PENDING:  { label: "Under review",              color: "text-yellow-600 bg-yellow-50" },
@@ -38,8 +38,8 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
     setError(null);
     try {
       await verifyBusiness(data);
-      // hard reload so useMyBusiness() re-fetches fresh status from backend
-      window.location.replace("/dashboard");
+      router.refresh();
+      router.push("/dashboard");
       return;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Verification failed");
@@ -51,7 +51,7 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
   const badge = statusBadge[status];
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
+    <div className="min-h-screen flex items-center justify-center px-6 py-8">
       <div className="w-full max-w-xl space-y-6">
         <div className="space-y-1">
           <Image src="/logo.svg" alt="" width={50} height={50} className="mb-6" />
@@ -67,25 +67,24 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
         </div>
 
         <div className="space-y-4">
-          {/* Owner */}
           <div>
             <Input
-              placeholder="Owner full name *"
+              label="You're the owner? State your name please"
+              placeholder="e.g. John Doe"
               className="h-14 text-base rounded-xl"
               {...form.register("ownerName")}
             />
             <p className="text-red-500 text-xs mt-1">{form.formState.errors.ownerName?.message}</p>
           </div>
-
-          {/* Location */}
-          <div>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Business Location</label>
             <Select
               onValueChange={(val) =>
                 form.setValue("businessLocation", val as VerifyInput["businessLocation"], { shouldValidate: true })
               }
             >
               <SelectTrigger className="h-14 rounded-xl">
-                <SelectValue placeholder="Business location *" />
+                <SelectValue placeholder="Business location" />
               </SelectTrigger>
               <SelectContent>
                 {businessAseanLocation.map((c) => (
@@ -95,41 +94,37 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
             </Select>
             <p className="text-red-500 text-xs mt-1">{form.formState.errors.businessLocation?.message}</p>
           </div>
-
-          {/* Tagline */}
           <div>
             <Input
-              placeholder="Tagline (one-liner, max 160 chars)"
+              label="Have a tagline? Share it with us it will help us understand your business better"
+              placeholder="State your business tagline"
               className="h-14 text-base rounded-xl"
               {...form.register("tagline")}
             />
             <p className="text-red-500 text-xs mt-1">{form.formState.errors.tagline?.message}</p>
           </div>
-
-          {/* Description */}
           <div>
             <Textarea
-              placeholder="Business description * (min. 10 characters)"
+              label="Describe your business in a few words"
+              placeholder="e.g. We are a startup that provides a platform for businesses to manage X"
               className="rounded-xl resize-none"
               rows={3}
               {...form.register("businessDescription")}
             />
             <p className="text-red-500 text-xs mt-1">{form.formState.errors.businessDescription?.message}</p>
           </div>
-
-          {/* Business model */}
           <div>
             <Textarea
-              placeholder="Business model * (how do you make money?)"
+              label="How do you make money?"
+              placeholder="e.g. We sell X to Y"
               className="rounded-xl resize-none"
               rows={3}
               {...form.register("businessModel")}
             />
             <p className="text-red-500 text-xs mt-1">{form.formState.errors.businessModel?.message}</p>
           </div>
-
-          {/* Stage */}
-          <div>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Where are your business currently at?</label>
             <Select
               onValueChange={(val) =>
                 form.setValue("stage", val as VerifyInput["stage"], { shouldValidate: true })
@@ -148,28 +143,19 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
             </Select>
             <p className="text-red-500 text-xs mt-1">{form.formState.errors.stage?.message}</p>
           </div>
-
-          {/* Funding ask — always USD */}
-          <div>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-black/60 text-sm font-semibold">
-                USD
-              </span>
-              <Input
-                type="number"
-                min={0}
-                placeholder="Funding ask amount"
-                className="h-14 text-base rounded-xl pl-16"
-                {...form.register("fundingAsk", { valueAsNumber: true })}
-              />
-            </div>
-            <p className="text-red-500 text-xs mt-1">{form.formState.errors.fundingAsk?.message}</p>
-          </div>
-
-          {/* Website */}
           <div>
             <Input
-              placeholder="Website URL (https://...)"
+              label="How much are you looking for? (in dollars)"
+              placeholder="e.g. $100,000"
+              className="h-14 text-base rounded-xl"
+              {...form.register("fundingAsk", { valueAsNumber: true })}
+            />
+            <p className="text-red-500 text-xs mt-1">{form.formState.errors.fundingAsk?.message}</p>
+          </div>
+          <div>
+            <Input
+              label="Have a website? Share it with us"
+              placeholder="e.g. https://example.com"
               className="h-14 text-base rounded-xl"
               {...form.register("websiteUrl")}
             />
@@ -191,10 +177,12 @@ export function VerificationForm({ status }: { status: BusinessVerificationStatu
             {loading ? "Submitting..." : "Verify"}
           </Button>
         </div>
-
-        <p className="text-xs text-muted-foreground text-center">
-          Skipping means your business won&apos;t be listed on the marketplace until verified.
-        </p>
+        <div className="flex items-center justify-center gap-2 pt-6">
+          <TriangleAlert className="w-3 text-muted-foreground shrink-0 opacity-50" />
+          <p className="text-xs text-muted-foreground opacity-50 text-center">
+            Skipping means your business won&apos;t be listed on the marketplace until verified.
+          </p>
+        </div>
       </div>
     </div>
   );
