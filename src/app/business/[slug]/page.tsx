@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { use, useEffect, useState } from "react";
+import { useUser } from "@clerk/nextjs";
 import { ArrowLeft, Video, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,16 +19,35 @@ type Props = {
 export default function BusinessDetailPage({ params }: Props) {
   const { slug } = use(params);
   const router = useRouter();
+  const { user, isLoaded } = useUser();
   const [business, setBusiness] = useState<BusinessDetail | null>(null);
   const [error, setError] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     apiFetch<BusinessDetail>(`/businesses/${encodeURIComponent(slug)}`)
-      .then(setBusiness)
-      .catch(() => setError(true));
+      .then((data) => {
+        setBusiness(data);
+        setLoadError(null);
+      })
+      .catch((fetchError: Error & { status?: number }) => {
+        if (fetchError.status === 404) {
+          setError(true);
+          return;
+        }
+        setLoadError(fetchError.message || "Failed to load business details.");
+      });
   }, [slug]);
 
   if (error) notFound();
+
+  if (loadError) {
+    return (
+      <div className="flex h-screen items-center justify-center px-6">
+        <p className="text-sm text-muted-foreground">{loadError}</p>
+      </div>
+    );
+  }
 
   if (!business) {
     return (
@@ -136,11 +156,27 @@ export default function BusinessDetailPage({ params }: Props) {
             size="lg"
             className="w-full gap-2"
             onClick={async () => {
+              if (!isLoaded) {
+                return;
+              }
+
+              if (!user) {
+                router.push("/auth/login");
+                return;
+              }
+
+              const role = (user.unsafeMetadata?.role ?? user.publicMetadata?.role) as string | undefined;
+              if (role === "FOUNDER") {
+                router.push("/dashboard");
+                return;
+              }
+
               apiFetch(`/businesses/${business.id}/interview-started`, {
                 method: "POST",
               }).catch(() => {});
               router.push(`/business/${slug}/avatar`);
             }}
+            disabled={!isLoaded}
           >
             <Video size={16} />
             Go Interview

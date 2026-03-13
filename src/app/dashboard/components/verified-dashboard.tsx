@@ -1,220 +1,262 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useEffect, useMemo, useState } from "react";
 import { type MyBusiness } from "@/api/v1/business/route";
-import { apiFetch } from "@/lib/api";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { CartesianGrid, Line, LineChart, XAxis } from "recharts";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Check, Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
-interface Deal {
+type InvestorDeal = {
   investor: { id: string; name: string; email: string; avatarUrl: string | null };
-  deal: {
-    id: string;
-    status: string;
-    investmentAmount: number | null;
-    equityPct: number | null;
-    createdAt: string;
+  deal: { id: string; status: string; createdAt: string };
+};
+
+const chartConfig = {
+  deals: {
+    label: "Deals",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
+
+function buildDailyDealsChartData(investors: InvestorDeal[], days = 14) {
+  const toLocalDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   };
-}
 
-function fmt(n: number | null, currency = "USD") {
-  if (n == null) return "—";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency, notation: "compact" }).format(n);
-}
+  const today = new Date();
+  const perDayCount = new Map<string, number>();
 
-function statusColor(s: string) {
-  if (s === "SIGNED") return "text-green-700 bg-green-50";
-  if (s === "NEGOTIATING") return "text-yellow-700 bg-yellow-50";
-  if (s === "REJECTED") return "text-red-600 bg-red-50";
-  return "text-muted-foreground bg-muted";
-}
+  for (const item of investors) {
+    const date = new Date(item.deal.createdAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const key = toLocalDateKey(date);
+    perDayCount.set(key, (perDayCount.get(key) ?? 0) + 1);
+  }
 
-interface InvestorListResponse {
-  data: Deal[];
-  total: number;
-  page: number;
-  limit: number;
+  const points: Array<{ day: string; deals: number }> = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const currentDate = new Date(today);
+    currentDate.setHours(0, 0, 0, 0);
+    currentDate.setDate(today.getDate() - i);
+    const key = toLocalDateKey(currentDate);
+    const label = currentDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+
+    points.push({
+      day: label,
+      deals: perDayCount.get(key) ?? 0,
+    });
+  }
+
+  return points;
 }
 
 export function VerifiedDashboard({ business }: { business: MyBusiness }) {
-  const router = useRouter();
-  const { getToken } = useAuth();
-  const [deals, setDeals] = useState<Deal[]>([]);
+  const [investors, setInvestors] = useState<InvestorDeal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isPublished, setIsPublished] = useState(business.isPublished);
-  const [toggling, setToggling] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   useEffect(() => {
-    getToken()
-      .then((token) => apiFetch<InvestorListResponse>(`/businesses/${business.id}/investors`, {}, token))
-      .then((res) => setDeals(res.data ?? []))
-      .catch(() => setDeals([]))
+    apiFetch<InvestorDeal[]>(`/businesses/${business.id}/investors`)
+      .then(setInvestors)
+      .catch(() => setInvestors([]))
       .finally(() => setLoading(false));
-  }, [business.id, getToken]);
+  }, [business.id]);
 
-  async function togglePublished() {
-    setToggling(true);
+  const handleApprove = async (dealId: string) => {
+    setApprovingId(dealId);
     try {
-      const token = await getToken();
-      await apiFetch(`/businesses/${business.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ isPublished: !isPublished }),
-      }, token);
-      setIsPublished((p) => !p);
+      await apiFetch(`/deals/${dealId}/approve`, { method: "PATCH" });
+      setInvestors((prev) =>
+        prev.map((item) =>
+          item.deal.id === dealId
+            ? { ...item, deal: { ...item.deal, status: "NEGOTIATING" } }
+            : item,
+        ),
+      );
     } catch {
-      // silently fail
+      // ignore
     } finally {
-      setToggling(false);
+      setApprovingId(null);
     }
-  }
+  };
 
-  const totalDeals = deals.length;
-  const activeDeals = deals.filter((d) => ["NEGOTIATING", "SIGNED"].includes(d.deal.status)).length;
-  const totalFunding = deals
-    .filter((d) => d.deal.status === "SIGNED" && d.deal.investmentAmount)
-    .reduce((s, d) => s + (d.deal.investmentAmount ?? 0), 0);
+  const draftCount = investors.filter((i) => i.deal.status === "DRAFT").length;
+  const totalCount = investors.length;
+  const chartData = useMemo(() => buildDailyDealsChartData(investors), [investors]);
 
   return (
-    <div className="p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-
-        {/* Header */}
+    <div className="min-h-screen p-8">
+      <div className="mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <Image src={business.logoUrl ?? "/logo.svg"} alt="" width={44} height={44}
-            className="rounded-xl border" unoptimized />
-          <div>
+          <Image src="/logo.svg" alt="" width={40} height={40} />
+          <div className="space-y-1">
             <h1 className="text-2xl font-bold">{business.name}</h1>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
                 Verified
               </span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isPublished ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
-                {isPublished ? "Live di marketplace" : "Tidak dipublish"}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-6 text-xs px-2"
-                disabled={toggling}
-                onClick={togglePublished}
-              >
-                {toggling ? "..." : isPublished ? "Unpublish" : "Publish"}
-              </Button>
+              {business.scoredAt && (
+                <span className="text-xs bg-background px-2 py-0.5 rounded-full font-medium">
+                  AI score: {business.score}/100
+                </span>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Stat cards */}
-        <div className="grid grid-cols-3 gap-4">
+        <p className="text-muted-foreground text-sm">
+          Your business is {business.isPublished ? "live on the marketplace." : "not yet published."}
+        </p>
+        <div className="grid grid-cols-3 gap-6">
           <Card>
-            <CardHeader className="pb-1">
-              <CardDescription>Total Investor</CardDescription>
-              <CardTitle className="text-3xl">{loading ? "—" : totalDeals}</CardTitle>
+            <CardHeader>
+              <CardTitle>Deals Incoming</CardTitle>
+              <CardDescription>Requests from investors who chose to make an offer.</CardDescription>
             </CardHeader>
+            <CardContent>
+              <p className="text-2xl">{draftCount}</p>
+            </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-1">
-              <CardDescription>Deal Aktif</CardDescription>
-              <CardTitle className="text-3xl">{loading ? "—" : activeDeals}</CardTitle>
+            <CardHeader>
+              <CardTitle>Listed</CardTitle>
+              <CardDescription>Total investors interested.</CardDescription>
             </CardHeader>
+            <CardContent>
+              <p className="text-2xl">{totalCount}</p>
+            </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-1">
-              <CardDescription>Funding Diterima</CardDescription>
-              <CardTitle className="text-2xl">{loading ? "—" : fmt(totalFunding)}</CardTitle>
+            <CardHeader>
+              <CardTitle>Growth</CardTitle>
+              <CardDescription>Deals over time.</CardDescription>
             </CardHeader>
+            <CardContent>
+              <p className="text-2xl">+{totalCount > 0 ? Math.round((draftCount / totalCount) * 100) : 0}%</p>
+            </CardContent>
           </Card>
         </div>
-
-        {/* Business info */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Info Bisnis</CardTitle>
+            <CardTitle>Deals per Day</CardTitle>
+            <CardDescription>Daily count of new deal requests from investors in the last 14 days.</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Industri</p>
-              <p className="font-medium">{business.industry ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Stage</p>
-              <p className="font-medium">{business.stage?.replace(/_/g, " ") ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Funding Ask</p>
-              <p className="font-medium">{fmt(business.fundingAsk, business.fundingCurrency ?? "USD")}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Tagline</p>
-              <p className="font-medium">{business.tagline ?? "—"}</p>
-            </div>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="w-full">
+              <LineChart accessibilityLayer data={chartData}>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="day"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  interval="preserveStartEnd"
+                />
+                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                <Line
+                  type="monotone"
+                  dataKey="deals"
+                  dot={false}
+                  stroke="var(--color-deals)"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ChartContainer>
           </CardContent>
         </Card>
 
-        {/* Investor table */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold">Daftar Investor</h2>
-            <Button size="sm" variant="outline"
-              onClick={() => router.push(`/dashboard/ai-configuration?businessId=${business.id}`)}>
-              Kelola AI Knowledge
-            </Button>
-          </div>
-          <Card className="rounded-xl">
-            {loading ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">Memuat...</div>
-            ) : deals.length === 0 ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">
-                Belum ada investor yang terhubung.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Investor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Investasi</TableHead>
-                    <TableHead>Ekuitas</TableHead>
-                    <TableHead>Tanggal</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {deals.map((d) => (
-                    <TableRow key={d.deal.id}>
-                      <TableCell>
-                        <p className="font-medium text-sm">{d.investor.name}</p>
-                        <p className="text-xs text-muted-foreground">{d.investor.email}</p>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(d.deal.status)}`}>
-                          {d.deal.status}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {d.deal.investmentAmount ? fmt(d.deal.investmentAmount) : "—"}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {d.deal.equityPct != null ? `${d.deal.equityPct}%` : "—"}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(d.deal.createdAt).toLocaleDateString("id-ID", {
-                          day: "numeric", month: "short", year: "numeric",
-                        })}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </Card>
+        <div className="flex gap-4 items-center justify-between pt-8">
+          <h1 className="text-lg font-semibold">Your investors list</h1>
         </div>
 
+        <Card className="rounded-xl">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>No</TableHead>
+                <TableHead>Investor</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8">
+                    <Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
+              ) : investors.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground text-sm">
+                    No investors yet.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                investors.map((item, idx) => (
+                  <TableRow key={item.deal.id}>
+                    <TableCell>{idx + 1}</TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="text-sm font-medium">{item.investor.name}</p>
+                        <p className="text-xs text-muted-foreground">{item.investor.email}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={item.deal.status === "DRAFT" ? "secondary" : "default"}
+                        className="text-xs"
+                      >
+                        {item.deal.status === "DRAFT" ? "Requested" : item.deal.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {item.deal.status === "DRAFT" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          disabled={approvingId === item.deal.id}
+                          onClick={() => handleApprove(item.deal.id)}
+                        >
+                          {approvingId === item.deal.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Check size={12} />
+                          )}
+                          Approve
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </Card>
       </div>
     </div>
   );

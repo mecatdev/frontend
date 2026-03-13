@@ -33,5 +33,6 @@ export async function getInvestorProfile(
   id: string,
   token?: string | null
 ): Promise<InvestorProfile> {
-  return apiFetch<InvestorProfile>(`/investors/${id}`, {}, token);
+  void token;
+  return apiFetch<InvestorProfile>(`/investors/${id}`);
 }

@@ -16,5 +16,6 @@ export interface UserProfile {
 }
 
 export async function getMyProfile(token?: string | null): Promise<UserProfile> {
-  return apiFetch<UserProfile>("/auth/profile", {}, token);
+  void token;
+  return apiFetch<UserProfile>("/auth/profile");
 }

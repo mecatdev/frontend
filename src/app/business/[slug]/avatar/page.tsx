@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -42,7 +43,9 @@ export default function AvatarPage({ params }: Props) {
   // ── Fetch real business from backend ──────────────────────────────────────
   const [businessName, setBusinessName] = useState<string>(slug);
   const [businessId, setBusinessId] = useState<string | null>(null);
+  const [businessOwnerId, setBusinessOwnerId] = useState<string | null>(null);
   const [notFoundBusiness, setNotFoundBusiness] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     getToken()
@@ -50,6 +53,8 @@ export default function AvatarPage({ params }: Props) {
       .then((b) => {
         setBusinessName(b.name);
         setBusinessId(b.id);
+        setBusinessOwnerId(b.ownerId);
+        setLoadError(null);
       })
       .catch(() => setNotFoundBusiness(true));
   }, [slug, getToken]);
@@ -101,6 +106,24 @@ export default function AvatarPage({ params }: Props) {
     : "Ready — speak now";
 
   const combinedError = audio.error ?? voice.error;
+
+  if (notFoundBusiness) notFound();
+
+  if (!isLoaded || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-screen items-center justify-center px-6">
+        <p className="text-sm text-muted-foreground">{loadError}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-white text-primary select-none">
@@ -170,11 +193,15 @@ export default function AvatarPage({ params }: Props) {
       {/* Right panel */}
       <ChatPanel messages={voice.messages} isOpen={isChatOpen} />
 
-      <EndCallDialog
-        open={isEndCallOpen}
-        businessName={businessName}
-        onComplete={handleComplete}
-      />
+      {businessId && businessOwnerId && (
+        <EndCallDialog
+          open={isEndCallOpen}
+          businessId={businessId}
+          businessName={businessName}
+          businessOwnerId={businessOwnerId}
+          onComplete={handleComplete}
+        />
+      )}
     </div>
   );
 }

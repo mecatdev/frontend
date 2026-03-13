@@ -14,7 +14,7 @@ export default function LoginPage() {
   }, [isLoaded, user, router]);
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
+    <main className="min-h-screen flex items-center justify-center px-6 py-12">
       <div className="flex flex-col items-center gap-6 w-full max-w-sm">
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>

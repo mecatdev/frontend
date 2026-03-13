@@ -15,8 +15,24 @@ export interface MyBusiness {
   fundingCurrency: string | null;
   isPublished: boolean;
   verificationStatus: BusinessVerificationStatus;
+  score: number;
+  scoredAt: string | null;
+  scores?: BusinessScore[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BusinessScore {
+  id: string;
+  category: string;
+  score: number;
+  maxScore: number;
+  metadata?: {
+    label?: string;
+    reason?: string;
+    [key: string]: unknown;
+  } | null;
+  createdAt: string;
 }
 
 export interface VerifyBusinessResponse {
@@ -39,6 +55,15 @@ export async function getBusiness(idOrSlug: string): Promise<MyBusiness> {
   return apiFetch<MyBusiness>(`/businesses/${idOrSlug}`);
 }
 
-export async function getMyBusinesses(token?: string | null): Promise<MyBusiness[]> {
-  return apiFetch<MyBusiness[]>("/businesses/mine", {}, token);
+export async function getMyBusinesses(): Promise<MyBusiness[]> {
+  try {
+    const business = await getMyBusiness();
+    return [business];
+  } catch (e) {
+    const status = (e as Error & { status?: number }).status;
+    if (status === 404) {
+      return [];
+    }
+    throw e;
+  }
 }
