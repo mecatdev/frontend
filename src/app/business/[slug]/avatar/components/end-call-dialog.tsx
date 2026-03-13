@@ -12,8 +12,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { ArrowLeft, Loader2, Paperclip, X } from "lucide-react";
+import { apiFetch, apiUpload } from "@/lib/api";
 
 const TOTAL_STEPS = 3;
 
@@ -45,6 +45,7 @@ export function EndCallDialog({
   const [interested, setInterested] = useState<boolean | null>(null);
   const [emailBody, setEmailBody] = useState(EMAIL_TEMPLATE);
   const [sending, setSending] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const progress = (step / TOTAL_STEPS) * 100;
@@ -70,17 +71,20 @@ export function EndCallDialog({
   const handleSendMail = async () => {
     setSending(true);
     try {
-      await apiFetch("/mails", {
-        method: "POST",
-        body: JSON.stringify({
-          recipientId: businessOwnerId,
-          businessId,
-          subject: interested
-            ? `Investment Interest — ${businessName}`
-            : `Follow-up — ${businessName}`,
-          body: emailBody,
-        }),
-      });
+      const formData = new FormData();
+      formData.append("recipientId", businessOwnerId);
+      formData.append("businessId", businessId);
+      formData.append(
+        "subject",
+        interested
+          ? `Investment Interest — ${businessName}`
+          : `Follow-up — ${businessName}`,
+      );
+      formData.append("body", emailBody);
+      if (selectedFile) {
+        formData.append("files", selectedFile);
+      }
+      await apiUpload("/mails", formData);
     } catch {
       // continue even on error
     } finally {
@@ -129,6 +133,8 @@ export function EndCallDialog({
               emailBody={emailBody}
               onEmailChange={setEmailBody}
               fileRef={fileRef}
+              selectedFile={selectedFile}
+              onFileChange={setSelectedFile}
               onNext={handleSendMail}
               sending={sending}
             />
@@ -179,6 +185,8 @@ function Step2({
   emailBody,
   onEmailChange,
   fileRef,
+  selectedFile,
+  onFileChange,
   onNext,
   sending,
 }: {
@@ -187,6 +195,8 @@ function Step2({
   fileRef: React.RefObject<HTMLInputElement | null>;
   onNext: () => void;
   sending: boolean;
+  selectedFile: File | null;
+  onFileChange: (f: File | null) => void;
 }) {
   return (
     <div className="space-y-6">
@@ -202,32 +212,52 @@ function Step2({
           onChange={(e) => onEmailChange(e.target.value)}
           className="h-[400px] resize-none text-sm leading-relaxed rounded-xl"
         />
-        <div
-          className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-input bg-muted/40 cursor-pointer hover:bg-muted/70 transition-colors"
-          onClick={() => fileRef.current?.click()}
-        >
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground/80">Attach document</p>
-            <p className="text-xs text-muted-foreground truncate" id="file-label">
-              PDF, DOCX, PPTX up to 10MB
-            </p>
+        {selectedFile ? (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-primary/30 bg-primary/5">
+            <Paperclip size={14} className="text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {(selectedFile.size / 1024).toFixed(0)} KB
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                onFileChange(null);
+                if (fileRef.current) fileRef.current.value = "";
+              }}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X size={14} />
+            </button>
           </div>
-          <Button variant="outline" size="sm" className="shrink-0 pointer-events-none rounded-lg">
-            Browse
-          </Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".pdf,.doc,.docx,.ppt,.pptx"
-            className="sr-only"
-            aria-labelledby="file-label"
-            onChange={(e) => {
-              const name = e.target.files?.[0]?.name;
-              const label = document.getElementById("file-label");
-              if (label && name) label.textContent = name;
-            }}
-          />
-        </div>
+        ) : (
+          <div
+            className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-input bg-muted/40 cursor-pointer hover:bg-muted/70 transition-colors"
+            onClick={() => fileRef.current?.click()}
+          >
+            <Paperclip size={14} className="text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground/80">Attach document</p>
+              <p className="text-xs text-muted-foreground truncate">
+                PDF, DOCX, PPTX up to 10MB
+              </p>
+            </div>
+            <Button variant="outline" size="sm" className="shrink-0 pointer-events-none rounded-lg">
+              Browse
+            </Button>
+          </div>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".pdf,.doc,.docx,.ppt,.pptx"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0] ?? null;
+            onFileChange(file);
+          }}
+        />
       </div>
       <Button className="w-full h-12 rounded-xl" onClick={onNext} disabled={sending}>
         {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send & Continue"}
