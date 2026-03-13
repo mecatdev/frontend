@@ -49,6 +49,15 @@ export function useVoiceSession({ businessId }: UseVoiceSessionOptions): VoiceSe
   // never captures a stale closure with businessId === null
   const sendTextRef = useRef<(text: string) => Promise<void>>(async () => {});
 
+  // ── Resume STT helper ─────────────────────────────────────────────────────
+  const resumeSTT = useCallback(() => {
+    if (activeRef.current && recognitionRef.current) {
+      setTimeout(() => {
+        try { recognitionRef.current?.start(); } catch { /* ok */ }
+      }, 300);
+    }
+  }, []);
+
   // ── Play base64 WAV ────────────────────────────────────────────────────────
   const playAudioBase64 = useCallback(async (base64: string, mimeType: string) => {
     return new Promise<void>((resolve) => {
@@ -67,12 +76,7 @@ export function useVoiceSession({ businessId }: UseVoiceSessionOptions): VoiceSe
         const cleanup = () => {
           URL.revokeObjectURL(url);
           setIsSpeaking(false);
-          // Resume STT after AI finishes speaking
-          if (activeRef.current && recognitionRef.current) {
-            setTimeout(() => {
-              try { recognitionRef.current?.start(); } catch { /* ok */ }
-            }, 300);
-          }
+          resumeSTT();
           resolve();
         };
 
@@ -84,7 +88,32 @@ export function useVoiceSession({ businessId }: UseVoiceSessionOptions): VoiceSe
         resolve();
       }
     });
-  }, []);
+  }, [resumeSTT]);
+
+  // ── Browser TTS fallback (when Gemini TTS fails) ──────────────────────────
+  const speakWithBrowserTTS = useCallback(async (text: string) => {
+    if (!window.speechSynthesis) {
+      resumeSTT();
+      return;
+    }
+
+    return new Promise<void>((resolve) => {
+      setIsSpeaking(true);
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "id-ID";
+      utterance.rate = 1;
+
+      const cleanup = () => {
+        setIsSpeaking(false);
+        resumeSTT();
+        resolve();
+      };
+
+      utterance.onend = cleanup;
+      utterance.onerror = cleanup;
+      window.speechSynthesis.speak(utterance);
+    });
+  }, [resumeSTT]);
 
   // ── Send text to backend ───────────────────────────────────────────────────
   const sendTextInternal = useCallback(async (text: string) => {
@@ -134,13 +163,16 @@ export function useVoiceSession({ businessId }: UseVoiceSessionOptions): VoiceSe
 
       if (assistantAudio?.base64) {
         await playAudioBase64(assistantAudio.base64, assistantAudio.mimeType ?? "audio/wav");
+      } else {
+        // Gemini TTS failed — use browser built-in TTS as fallback
+        await speakWithBrowserTTS(assistantMessage.content);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal mendapat respons");
     } finally {
       setIsThinking(false);
     }
-  }, [businessId, getToken, playAudioBase64]);
+  }, [businessId, getToken, playAudioBase64, speakWithBrowserTTS]);
 
   // Keep the ref always pointing to the latest sendTextInternal
   useEffect(() => {

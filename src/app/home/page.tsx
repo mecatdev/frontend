@@ -112,6 +112,7 @@ export default function HomePage() {
         isLoading={isLoading}
         isFetchingMore={isFetchingMore}
         hasMore={hasMore && !debouncedQuery.trim()}
+        allowLoopWhenExhausted={!debouncedQuery.trim()}
         onLoadMore={loadMore}
       />
     </div>

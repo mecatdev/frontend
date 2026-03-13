@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
-import { Home, Mail, LogOut } from "lucide-react";
+import { Home, Mail, LogOut, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +22,7 @@ import { apiFetch } from "@/lib/api";
 const navItems = [
   { label: "Home", href: "/home", icon: Home },
   { label: "Mail", href: "/home/mail", icon: Mail },
+  { label: "Profile", href: "/home/profile", icon: User },
 ];
 
 export function HomeSidebar() {
