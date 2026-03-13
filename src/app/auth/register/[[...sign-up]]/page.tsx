@@ -43,7 +43,7 @@ function RegisterForm() {
   const active = roles.find((r) => r.value === role)!;
 
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-sm">
+    <div className="flex flex-col items-center gap-6 w-full max-w-sm py-12">
       <div className="text-center space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">Create account</h1>
         <p className="text-sm text-muted-foreground">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type MyBusiness } from "@/api/v1/business/route";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -29,26 +29,50 @@ type InvestorDeal = {
   deal: { id: string; status: string; createdAt: string };
 };
 
-const chartData = [
-  { month: "January", investors: 4 },
-  { month: "February", investors: 6 },
-  { month: "March", investors: 3 },
-  { month: "April", investors: 5 },
-  { month: "May", investors: 8 },
-  { month: "June", investors: 9 },
-  { month: "July", investors: 11 },
-  { month: "August", investors: 12 },
-  { month: "September", investors: 14 },
-  { month: "October", investors: 12 },
-  { month: "December", investors: 16 },
-];
-
 const chartConfig = {
-  investors: {
+  deals: {
     label: "Deals",
     color: "hsl(var(--primary))",
   },
 } satisfies ChartConfig;
+
+function buildDailyDealsChartData(investors: InvestorDeal[], days = 14) {
+  const toLocalDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const today = new Date();
+  const perDayCount = new Map<string, number>();
+
+  for (const item of investors) {
+    const date = new Date(item.deal.createdAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const key = toLocalDateKey(date);
+    perDayCount.set(key, (perDayCount.get(key) ?? 0) + 1);
+  }
+
+  const points: Array<{ day: string; deals: number }> = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const currentDate = new Date(today);
+    currentDate.setHours(0, 0, 0, 0);
+    currentDate.setDate(today.getDate() - i);
+    const key = toLocalDateKey(currentDate);
+    const label = currentDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+
+    points.push({
+      day: label,
+      deals: perDayCount.get(key) ?? 0,
+    });
+  }
+
+  return points;
+}
 
 export function VerifiedDashboard({ business }: { business: MyBusiness }) {
   const [investors, setInvestors] = useState<InvestorDeal[]>([]);
@@ -82,6 +106,7 @@ export function VerifiedDashboard({ business }: { business: MyBusiness }) {
 
   const draftCount = investors.filter((i) => i.deal.status === "DRAFT").length;
   const totalCount = investors.length;
+  const chartData = useMemo(() => buildDailyDealsChartData(investors), [investors]);
 
   return (
     <div className="min-h-screen p-8">
@@ -109,7 +134,7 @@ export function VerifiedDashboard({ business }: { business: MyBusiness }) {
           <Card>
             <CardHeader>
               <CardTitle>Deals Incoming</CardTitle>
-              <CardDescription>Pending deals from investors.</CardDescription>
+              <CardDescription>Requests from investors who chose to make an offer.</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-2xl">{draftCount}</p>
@@ -136,27 +161,26 @@ export function VerifiedDashboard({ business }: { business: MyBusiness }) {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Your Business Investors Growth</CardTitle>
-            <CardDescription>Track the growth of your business investors over time.</CardDescription>
+            <CardTitle>Deals per Day</CardTitle>
+            <CardDescription>Daily count of new deal requests from investors in the last 14 days.</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="w-full">
               <LineChart accessibilityLayer data={chartData}>
                 <CartesianGrid vertical={false} />
                 <XAxis
-                  dataKey="month"
+                  dataKey="day"
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  interval={0}
-                  tickFormatter={(value) => value.slice(0, 3)}
+                  interval="preserveStartEnd"
                 />
                 <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
                 <Line
                   type="monotone"
-                  dataKey="investors"
+                  dataKey="deals"
                   dot={false}
-                  stroke="var(--color-investors)"
+                  stroke="var(--color-deals)"
                   strokeWidth={2}
                 />
               </LineChart>

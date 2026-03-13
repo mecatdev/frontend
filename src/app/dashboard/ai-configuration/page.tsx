@@ -1,9 +1,7 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { useSearchParams } from "next/navigation";
-import { getMyBusinesses } from "@/api/v1/business/route";
+import { getMyBusiness } from "@/api/v1/business/route";
 import type { MyBusiness } from "@/api/v1/business/route";
 import {
   listKnowledgeChunks,
@@ -18,13 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 
 const PROMPT_KEY = "ai_system_prompt";
 
@@ -40,23 +31,11 @@ function groupBySource(chunks: KnowledgeChunk[]) {
 
 export default function AIConfigurationPage() {
   const { getToken } = useAuth();
-  const searchParams = useSearchParams();
-  const urlBusinessId = searchParams.get("businessId");
-
-  // ── Business selector ──────────────────────────────────────────────────────
-  const [businesses, setBusinesses] = useState<MyBusiness[]>([]);
-  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(urlBusinessId);
+  const [business, setBusiness] = useState<MyBusiness | null>(null);
 
   useEffect(() => {
-    getMyBusinesses().then(setBusinesses).catch(() => {});
+    getMyBusiness().then(setBusiness).catch(() => setBusiness(null));
   }, []);
-
-  // If URL param changes (e.g. navigation), sync state
-  useEffect(() => {
-    if (urlBusinessId) setSelectedBusinessId(urlBusinessId);
-  }, [urlBusinessId]);
-
-  const selectedBusiness = businesses.find((b) => b.id === selectedBusinessId) ?? null;
 
   // ── System Prompt ──────────────────────────────────────────────────────────
   const [systemPrompt, setSystemPrompt] = useState(
@@ -112,26 +91,26 @@ export default function AIConfigurationPage() {
   }
 
   useEffect(() => {
-    if (selectedBusinessId) {
+    if (business?.id) {
       setChunks([]);
-      loadChunks(selectedBusinessId);
+      loadChunks(business.id);
     }
-  }, [selectedBusinessId]); // eslint-disable-line
+  }, [business?.id]); // eslint-disable-line
 
   // ── Upload file ────────────────────────────────────────────────────────────
   async function handleUploadFile() {
-    if (!file || !selectedBusinessId) return;
+    if (!file || !business?.id) return;
     setUploading(true);
     setUploadMsg(null);
     try {
       const token = await getToken();
       const label = fileLabel.trim() || file.name;
-      const result = await uploadKnowledgeFile(selectedBusinessId, file, label, token);
+      const result = await uploadKnowledgeFile(business.id, file, label, token);
       setUploadMsg({ type: "ok", text: `Berhasil: ${result.chunksCreated} chunk dari "${label}"` });
       setFile(null);
       setFileLabel("");
       if (fileInputRef.current) fileInputRef.current.value = "";
-      await loadChunks(selectedBusinessId);
+      await loadChunks(business.id);
     } catch (e) {
       setUploadMsg({ type: "err", text: e instanceof Error ? e.message : "Upload gagal" });
     } finally {
@@ -141,14 +120,13 @@ export default function AIConfigurationPage() {
 
   // ── Upload text ────────────────────────────────────────────────────────────
   async function handleAddText() {
-    if (!textContent.trim() || !selectedBusinessId) return;
+    if (!textContent.trim() || !business?.id) return;
     setAddingText(true);
     setUploadMsg(null);
     try {
-      const token = await getToken();
       const label = textLabel.trim() || "Manual Input";
       await apiFetch(
-        `/knowledge/${selectedBusinessId}/chunks`,
+        `/knowledge/${business.id}/chunks`,
         {
           method: "POST",
           body: JSON.stringify({ content: textContent.trim(), sourceLabel: label }),
@@ -157,7 +135,7 @@ export default function AIConfigurationPage() {
       setUploadMsg({ type: "ok", text: `Berhasil ditambahkan ke "${label}"` });
       setTextContent("");
       setTextLabel("");
-      await loadChunks(selectedBusinessId);
+      await loadChunks(business.id);
     } catch (e) {
       setUploadMsg({ type: "err", text: e instanceof Error ? e.message : "Gagal menambahkan teks" });
     } finally {
@@ -167,11 +145,11 @@ export default function AIConfigurationPage() {
 
   // ── Delete ─────────────────────────────────────────────────────────────────
   async function handleDelete(chunkId: string) {
-    if (!selectedBusinessId) return;
+    if (!business?.id) return;
     setDeletingIds((prev) => new Set(prev).add(chunkId));
     try {
       const token = await getToken();
-      await deleteKnowledgeChunk(selectedBusinessId, chunkId, token);
+      await deleteKnowledgeChunk(business.id, chunkId, token);
       setChunks((prev) => prev.filter((c) => c.id !== chunkId));
     } catch {
       // silently fail
@@ -207,34 +185,11 @@ export default function AIConfigurationPage() {
           </p>
         </div>
 
-        {/* Business Selector */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Select Business</CardTitle>
-            <CardDescription>Choose which business to manage AI knowledge for.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Select
-              value={selectedBusinessId ?? ""}
-              onValueChange={(val) => setSelectedBusinessId(val)}
-            >
-              <SelectTrigger className="h-11 rounded-xl">
-                <SelectValue placeholder="Select a business..." />
-              </SelectTrigger>
-              <SelectContent>
-                {businesses.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {!selectedBusiness ? (
+        {!business ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground text-sm">Select a business above to manage its AI knowledge.</p>
+            <p className="text-muted-foreground text-sm">
+              Business belum ditemukan. Buat atau verifikasi business terlebih dulu.
+            </p>
           </div>
         ) : (
           <>
@@ -315,7 +270,7 @@ export default function AIConfigurationPage() {
                             className="text-xs text-red-500 hover:underline"
                             onClick={(e) => { e.stopPropagation(); setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
                           >
-                            Hapus
+                            Delete
                           </button>
                         </div>
                       ) : (
@@ -404,11 +359,11 @@ export default function AIConfigurationPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 text-xs h-7"
+                            className="text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 text-xs h-7"
                             onClick={() => handleDeleteSource(label)}
                             disabled={sourceChunks.some((c) => deletingIds.has(c.id))}
                           >
-                            Hapus semua
+                            Delete All
                           </Button>
                         </div>
                         <div className="space-y-2">
@@ -423,11 +378,11 @@ export default function AIConfigurationPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-red-500 hover:text-red-600 hover:bg-red-50 h-7 text-xs"
+                                  className="text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 h-7 text-xs"
                                   onClick={() => handleDelete(chunk.id)}
                                   disabled={deletingIds.has(chunk.id)}
                                 >
-                                  {deletingIds.has(chunk.id) ? "..." : "Hapus"}
+                                  {deletingIds.has(chunk.id) ? "..." : "Delete"}
                                 </Button>
                               </div>
                             </div>
