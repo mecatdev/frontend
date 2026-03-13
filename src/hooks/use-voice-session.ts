@@ -201,8 +201,12 @@ export function useVoiceSession({ businessId }: UseVoiceSessionOptions): VoiceSe
     };
 
     rec.onerror = (e: any) => {
-      if (e.error !== "no-speech" && e.error !== "aborted") {
-        setError(`Mic error: ${e.error}`);
+      if (e.error === "not-allowed") {
+        setError("Microphone access denied. On macOS, go to System Settings → Privacy & Security → Microphone and enable your browser.");
+      } else if (e.error === "language-not-supported") {
+        setError("Speech recognition does not support Indonesian on this browser. Please use Chrome or Edge.");
+      } else if (e.error !== "no-speech" && e.error !== "aborted") {
+        setError(`Speech recognition error: ${e.error}`);
       }
     };
 

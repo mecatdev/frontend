@@ -237,11 +237,13 @@ export function MessageNode({
   isFirst,
   isLast,
   isCurrentUser,
+  onAnalyzeAttachment,
 }: {
   msg: Mail;
   isFirst: boolean;
   isLast: boolean;
   isCurrentUser: boolean;
+  onAnalyzeAttachment?: (attachment: Attachment) => void;
 }) {
   const attachments = (msg.attachments ?? []) as Attachment[];
 
@@ -309,29 +311,47 @@ export function MessageNode({
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3 pl-[42px]">
             {attachments.map((att, i) => (
-              <a
+              <div
                 key={i}
-                href={resolveAttachmentUrl(att.url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                download={att.name}
-                className="flex items-center gap-1.5 bg-muted/40 rounded-md px-2.5 py-1.5 text-[11px] hover:bg-muted/60 transition-colors group/att"
+                className="flex items-center gap-1.5 bg-muted/40 rounded-md px-2.5 py-1.5 text-[11px] group/att"
               >
-                <FileText
-                  size={12}
-                  className="text-muted-foreground shrink-0"
-                />
-                <span className="max-w-[140px] truncate font-medium">
-                  {att.name}
-                </span>
-                <span className="text-muted-foreground/50 shrink-0">
-                  {formatFileSize(att.size)}
-                </span>
-                <Download
-                  size={11}
-                  className="text-muted-foreground/40 group-hover/att:text-foreground shrink-0 ml-0.5"
-                />
-              </a>
+                <a
+                  href={resolveAttachmentUrl(att.url)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={att.name}
+                  className="flex items-center gap-1.5 hover:bg-muted/60 rounded-md px-1.5 py-0.5 transition-colors"
+                >
+                  <FileText
+                    size={12}
+                    className="text-muted-foreground shrink-0"
+                  />
+                  <span className="max-w-[140px] truncate font-medium">
+                    {att.name}
+                  </span>
+                  <span className="text-muted-foreground/50 shrink-0">
+                    {formatFileSize(att.size)}
+                  </span>
+                  <Download
+                    size={11}
+                    className="text-muted-foreground/40 group-hover/att:text-foreground shrink-0 ml-0.5"
+                  />
+                </a>
+                {onAnalyzeAttachment && !isCurrentUser && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-6 px-2 text-[10px] bg-primary text-white rounded-full opacity-0 group-hover/att:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onAnalyzeAttachment(att);
+                    }}
+                  >
+                    Analyze
+                  </Button>
+                )}
+              </div>
             ))}
           </div>
         )}

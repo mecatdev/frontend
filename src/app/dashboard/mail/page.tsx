@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch, apiUpload } from "@/lib/api";
 import {
   type Mail,
+  type Attachment,
   InboxHeader,
   InboxEmpty,
   InboxItem,
@@ -273,17 +274,6 @@ function BusinessThread({
             </div>
           </div>
           <div className="shrink-0 flex items-center gap-2">
-            {investorAttachments.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 h-8"
-                onClick={() => router.push(`/dashboard/mail/${mail.id}/analyze`)}
-              >
-                <ScanSearch size={13} />
-                Analyze Document
-              </Button>
-            )}
             {!dealLoading && dealInfo && dealInfo.deal.status === "DRAFT" && (
               <Button
                 onClick={handleApprove}
@@ -319,6 +309,13 @@ function BusinessThread({
                 isFirst={i === 0}
                 isLast={i === allMessages.length - 1}
                 isCurrentUser={msg.sender.id === currentUserId}
+                onAnalyzeAttachment={
+                  msg.sender.id !== currentUserId && (msg.attachments?.length ?? 0) > 0
+                    ? (att: Attachment) => {
+                        router.push(`/dashboard/mail/${mail.id}/analyze`);
+                      }
+                    : undefined
+                }
               />
             ))}
           </div>
