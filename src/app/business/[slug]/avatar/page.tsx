@@ -3,7 +3,7 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { fetchBusiness } from "@/lib/api";
 import { useAudioAnalyzer } from "@/hooks/use-audio-analyzer";
@@ -46,7 +46,7 @@ export default function AvatarPage({ params }: Props) {
 
   useEffect(() => {
     getToken()
-      .then((token) => fetchBusiness(slug, token))
+      .then((token) => fetchBusiness(slug))
       .then((b) => {
         setBusinessName(b.name);
         setBusinessId(b.id);
