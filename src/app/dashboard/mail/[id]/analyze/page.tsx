@@ -2,7 +2,6 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import type { Mail, Attachment } from "@/components/mail";
 import {
@@ -19,6 +18,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle,
+  Download,
   FileText,
   HelpCircle,
   Loader2,
@@ -38,19 +38,24 @@ type AnalysisResult = {
   risks?: RiskItem[];
 };
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.BACKEND_URL ||
-  "http://localhost:4000";
+type DocumentContent = {
+  name: string;
+  type: "message" | "text" | "binary";
+  text?: string;
+  url?: string;
+  mimeType?: string;
+};
 
 function resolveUrl(url: string): string {
+  // Already absolute
   if (url.startsWith("http")) return url;
-  return `${BACKEND_URL}${url}`;
+  return url;
 }
 
 async function tryFetchText(url: string): Promise<string | null> {
+  const target = url.startsWith("http") ? url : url;
   try {
-    const res = await fetch(resolveUrl(url));
+    const res = await fetch(target);
     const ct = res.headers.get("content-type") ?? "";
     if (!res.ok) return null;
     if (
@@ -65,6 +70,84 @@ async function tryFetchText(url: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+async function downloadBlob(url: string, filename: string) {
+  try {
+    const res = await fetch(resolveUrl(url));
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    window.open(resolveUrl(url), "_blank");
+  }
+}
+
+const SEVERITY_ORDER = ["critical", "high", "medium", "low"] as const;
+
+const SEVERITY_LINE_STYLE: Record<string, string> = {
+  critical: "bg-red-50 border-l-[3px] border-red-500 pl-2",
+  high: "bg-orange-50 border-l-[3px] border-orange-500 pl-2",
+  medium: "bg-yellow-50 border-l-[3px] border-yellow-400 pl-2",
+  low: "bg-green-50 border-l-[3px] border-green-500 pl-2",
+};
+
+const SEVERITY_DOT: Record<string, string> = {
+  critical: "bg-red-400",
+  high: "bg-orange-400",
+  medium: "bg-yellow-400",
+  low: "bg-green-400",
+};
+
+function getLineSeverity(line: string, risks: RiskItem[]): string | null {
+  const lower = line.toLowerCase();
+  let bestIdx = Infinity;
+  for (const risk of risks) {
+    const words = risk.clause.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+    if (words.length === 0) continue;
+    const matched = words.filter((w) => lower.includes(w)).length;
+    if (matched >= Math.max(1, Math.ceil(words.length * 0.5))) {
+      const idx = SEVERITY_ORDER.indexOf(
+        risk.severity as (typeof SEVERITY_ORDER)[number],
+      );
+      if (idx < bestIdx) bestIdx = idx;
+    }
+  }
+  return bestIdx < Infinity ? SEVERITY_ORDER[bestIdx] : null;
+}
+
+function HighlightedText({
+  text,
+  risks,
+}: {
+  text: string;
+  risks: RiskItem[];
+}) {
+  const lines = text.split("\n");
+  return (
+    <div className="text-xs font-mono leading-5 space-y-px">
+      {lines.map((line, i) => {
+        if (!line.trim()) return <div key={i} className="h-1.5" />;
+        const severity = getLineSeverity(line, risks);
+        return (
+          <div
+            key={i}
+            className={cn(
+              "px-2 py-0.5 rounded-sm whitespace-pre-wrap break-all",
+              severity ? SEVERITY_LINE_STYLE[severity] : "hover:bg-muted/20",
+            )}
+          >
+            {line}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function SeverityBadge({ severity }: { severity: string }) {
@@ -111,6 +194,8 @@ export default function AnalyzePage({
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [mail, setMail] = useState<Mail | null>(null);
   const [analyzedFiles, setAnalyzedFiles] = useState<string[]>([]);
+  const [docContents, setDocContents] = useState<DocumentContent[]>([]);
+  const [activeDoc, setActiveDoc] = useState(0);
 
   useEffect(() => {
     async function run() {
@@ -158,19 +243,40 @@ export default function AnalyzePage({
         (m) => (m.attachments ?? []) as Attachment[],
       );
       const fileNames: string[] = [];
+      const docs: DocumentContent[] = [];
+
+      // Add investor message bodies as document content
+      for (const msg of investorMessages) {
+        if (msg.body.trim()) {
+          docs.push({
+            name: `Message from ${msg.sender.name}`,
+            type: "message",
+            text: msg.body.trim(),
+          });
+        }
+      }
+
       for (const att of attachments) {
         const text = await tryFetchText(att.url);
         if (text) {
           parts.push(`--- Attachment: ${att.name} ---\n${text.slice(0, 20000)}`);
           fileNames.push(att.name);
+          docs.push({ name: att.name, type: "text", text: text.slice(0, 20000) });
         } else {
           // Include file name as context even if we can't read content
           parts.push(`--- Attachment: ${att.name} (${att.type}, binary file) ---`);
           fileNames.push(att.name);
+          docs.push({
+            name: att.name,
+            type: "binary",
+            url: att.url,
+            mimeType: att.type,
+          });
         }
       }
 
       setAnalyzedFiles(fileNames);
+      setDocContents(docs);
 
       const contractText = parts.join("\n\n");
       if (!contractText.trim()) {
@@ -188,6 +294,11 @@ export default function AnalyzePage({
           body: JSON.stringify({
             contractText: contractText.slice(0, 80000),
             businessId: thread.business.id,
+            attachments: attachments.map((att) => ({
+              name: att.name,
+              url: att.url,
+              type: att.type,
+            })),
           }),
         });
         setResult(data);
@@ -208,39 +319,37 @@ export default function AnalyzePage({
   const totalRisks = result?.risks?.length ?? 0;
 
   return (
-    <div className="min-h-screen bg-muted/40 p-8">
-      <div className="max-w-3xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-            className="gap-1.5 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft size={15} />
-            Back
-          </Button>
-          <Separator orientation="vertical" className="h-5" />
-          <div className="flex items-center gap-2">
-            <ShieldAlert size={18} className="text-primary" />
-            <h1 className="text-lg font-semibold">Document Risk Analysis</h1>
-          </div>
-          {mail && (
-            <Badge variant="secondary" className="text-[11px] ml-auto">
-              {mail.business.name}
-            </Badge>
-          )}
+    <div className="min-h-screen bg-white">
+      {/* Top header bar */}
+      <div className="sticky top-0 z-10 bg-white backdrop-blur border-b px-6 py-3 flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="gap-1.5 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft size={15} />
+          Back
+        </Button>
+        <Separator orientation="vertical" className="h-5" />
+        <div className="flex items-center gap-2">
+          <ShieldAlert size={18} className="text-primary" />
+          <h1 className="text-lg font-semibold">Document Risk Analysis</h1>
         </div>
+        {mail && (
+          <Badge variant="secondary" className="text-[11px] ml-auto">
+            {mail.business.name}
+          </Badge>
+        )}
+      </div>
 
-        {/* Loading state */}
-        {(status === "loading-mail" || status === "loading-analysis") && (
-          <Card>
+      {/* Loading / Error — full width */}
+      {(status === "loading-mail" || status === "loading-analysis") && (
+        <div className="flex items-center justify-center py-32">
+          <Card className="w-full max-w-md mx-8">
             <CardContent className="flex flex-col items-center justify-center py-20 gap-4">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Loader2 size={22} className="animate-spin text-primary" />
-                </div>
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Loader2 size={22} className="animate-spin text-primary" />
               </div>
               <div className="text-center space-y-1">
                 <p className="text-sm font-medium">{statusMsg}</p>
@@ -265,11 +374,12 @@ export default function AnalyzePage({
               )}
             </CardContent>
           </Card>
-        )}
+        </div>
+      )}
 
-        {/* Error state */}
-        {status === "error" && (
-          <Card>
+      {status === "error" && (
+        <div className="flex items-center justify-center py-32">
+          <Card className="w-full max-w-md mx-8">
             <CardContent className="flex flex-col items-center justify-center py-20 gap-3">
               <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
                 <AlertTriangle size={22} className="text-destructive" />
@@ -289,163 +399,252 @@ export default function AnalyzePage({
               </Button>
             </CardContent>
           </Card>
-        )}
+        </div>
+      )}
 
-        {/* Results */}
-        {status === "done" && result && (
-          <>
-            {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-2 pt-4 px-5">
-                  <CardDescription className="text-xs">Total Risks</CardDescription>
-                  <CardTitle className="text-2xl">{totalRisks}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card className={criticalCount > 0 ? "border-red-200" : ""}>
-                <CardHeader className="pb-2 pt-4 px-5">
-                  <CardDescription className="text-xs">Critical</CardDescription>
-                  <CardTitle
-                    className={cn(
-                      "text-2xl",
-                      criticalCount > 0 ? "text-red-600" : "text-foreground",
-                    )}
-                  >
-                    {criticalCount}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card className={highCount > 0 ? "border-orange-200" : ""}>
-                <CardHeader className="pb-2 pt-4 px-5">
-                  <CardDescription className="text-xs">High Severity</CardDescription>
-                  <CardTitle
-                    className={cn(
-                      "text-2xl",
-                      highCount > 0 ? "text-orange-600" : "text-foreground",
-                    )}
-                  >
-                    {highCount}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
+      {/* Two-column results layout */}
+      {status === "done" && result && (
+        <div className="flex gap-0 h-[calc(100vh-57px)]">
+
+          {/* ── LEFT: Document Preview ── */}
+          <div className="w-1/2 border-r bg-white flex flex-col overflow-hidden">
+            <div className="px-5 py-4 border-b shrink-0">
+              <div className="flex items-center gap-2">
+                <FileText size={15} className="text-primary" />
+                <span className="text-sm font-semibold">Document Preview</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Lines matching detected risks are highlighted.
+              </p>
             </div>
 
-            {/* Risk Feedback */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <ShieldAlert size={16} className="text-primary" />
-                  Risk Assessment
-                </CardTitle>
-                <CardDescription>
-                  AI-generated summary of the legal and commercial risks found.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm leading-relaxed text-foreground/80">
-                  {result.riskFeedback}
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Risk Items */}
-            {result.risks && result.risks.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <AlertTriangle size={16} className="text-primary" />
-                    Identified Risks
-                  </CardTitle>
-                  <CardDescription>
-                    Specific clauses and issues flagged during analysis.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3 pt-0">
-                  {result.risks.map((risk, i) => (
-                    <div
-                      key={i}
-                      className="flex gap-3 p-3.5 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
-                    >
-                      <SeverityIcon severity={risk.severity} />
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium">{risk.clause}</span>
-                          <SeverityBadge severity={risk.severity} />
-                        </div>
-                        <p className="text-[13px] text-muted-foreground leading-relaxed">
-                          {risk.description}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+            {/* Doc selector tabs */}
+            {docContents.length > 1 && (
+              <div className="flex gap-1.5 flex-wrap px-4 py-2.5 border-b bg-white shrink-0">
+                {docContents.map((doc, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveDoc(i)}
+                    className={cn(
+                      "text-[11px] px-2.5 py-1 rounded-full border transition-colors truncate max-w-[160px]",
+                      activeDoc === i
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-muted-foreground border-border hover:bg-muted/60",
+                    )}
+                    title={doc.name}
+                  >
+                    {doc.name}
+                  </button>
+                ))}
+              </div>
             )}
 
-            {/* Recommended Questions */}
-            {result.recommendedQuestions.length > 0 && (
+            {/* Viewer */}
+            <div className="flex-1 overflow-y-auto">
+              {(() => {
+                const doc = docContents[activeDoc];
+                if (!doc) return (
+                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                    No document selected
+                  </div>
+                );
+
+                if (doc.type === "binary") {
+                  const fileUrl = resolveUrl(doc.url ?? "");
+                  const isPdf =
+                    doc.mimeType?.includes("pdf") || doc.name.endsWith(".pdf");
+
+                  if (isPdf) {
+                    return (
+                      <iframe
+                        src={fileUrl}
+                        className="w-full h-full border-0"
+                        title={doc.name}
+                      />
+                    );
+                  }
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full gap-3 p-8">
+                      <FileText size={40} className="text-muted-foreground/40" />
+                      <p className="text-sm text-muted-foreground text-center">
+                        Preview not available for <span className="font-medium">{doc.name}</span>
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => downloadBlob(doc.url ?? "", doc.name)}
+                      >
+                        <Download size={13} />
+                        Download file
+                      </Button>
+                    </div>
+                  );
+                }
+
+                // text / message
+                return (
+                  <div className="p-4">
+                    <HighlightedText
+                      text={doc.text ?? ""}
+                      risks={result.risks ?? []}
+                    />
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Legend */}
+            {result.risks && result.risks.length > 0 && (
+              <div className="px-4 py-2.5 border-t bg-white shrink-0 flex items-center gap-3 flex-wrap">
+                <span className="text-[10px] text-muted-foreground">Highlights:</span>
+                {SEVERITY_ORDER.filter((sev) =>
+                  result.risks!.some((r) => r.severity === sev),
+                ).map((sev) => (
+                  <div key={sev} className="flex items-center gap-1">
+                    <div className={cn("w-2.5 h-2.5 rounded-sm", SEVERITY_DOT[sev])} />
+                    <span className="text-[10px] text-muted-foreground capitalize">{sev}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── RIGHT: Analysis Results ── */}
+          <div className="w-1/2 overflow-y-auto bg-white">
+            <div className="p-5 space-y-5 pb-12">
+
+              {/* Summary stat cards */}
+              <div className="grid grid-cols-3 gap-3">
+                <Card>
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardDescription className="text-[11px]">Total Risks</CardDescription>
+                    <CardTitle className="text-2xl">{totalRisks}</CardTitle>
+                  </CardHeader>
+                </Card>
+                <Card className={criticalCount > 0 ? "border-red-200" : ""}>
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardDescription className="text-[11px]">Critical</CardDescription>
+                    <CardTitle className={cn("text-2xl", criticalCount > 0 ? "text-red-600" : "")}>
+                      {criticalCount}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+                <Card className={highCount > 0 ? "border-orange-200" : ""}>
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardDescription className="text-[11px]">High</CardDescription>
+                    <CardTitle className={cn("text-2xl", highCount > 0 ? "text-orange-600" : "")}>
+                      {highCount}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+              </div>
+
+              {/* Risk Assessment summary */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <HelpCircle size={16} className="text-primary" />
-                    Recommended Questions to Ask
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <ShieldAlert size={15} className="text-primary" />
+                    Risk Assessment
                   </CardTitle>
-                  <CardDescription>
-                    Questions you should clarify with the investor before proceeding.
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <ol className="space-y-2.5">
-                    {result.recommendedQuestions.map((q, i) => (
-                      <li key={i} className="flex gap-3">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold flex items-center justify-center mt-0.5">
-                          {i + 1}
-                        </span>
-                        <p className="text-sm text-foreground/80 leading-relaxed">{q}</p>
-                      </li>
-                    ))}
-                  </ol>
+                  <p className="text-[13px] leading-relaxed text-foreground/80">
+                    {result.riskFeedback}
+                  </p>
                 </CardContent>
               </Card>
-            )}
 
-            {/* Analyzed files footer */}
-            {analyzedFiles.length > 0 && (
-              <Card className="bg-muted/30 border-dashed">
-                <CardContent className="py-4 px-5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <FileText size={13} className="text-muted-foreground shrink-0" />
-                    <span className="text-xs text-muted-foreground">
-                      Analyzed files:
-                    </span>
-                    {analyzedFiles.map((f) => (
-                      <span
-                        key={f}
-                        className="text-[11px] bg-background border px-2 py-0.5 rounded-full text-muted-foreground"
+              {/* Identified Risks list */}
+              {result.risks && result.risks.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <AlertTriangle size={15} className="text-primary" />
+                      Identified Risks
+                    </CardTitle>
+                    <CardDescription className="text-[11px]">
+                      Specific clauses flagged during analysis.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2.5 pt-0">
+                    {result.risks.map((risk, i) => (
+                      <div
+                        key={i}
+                        className="flex gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors cursor-pointer"
+                        onClick={() => {
+                          // scroll to highlight: find the first doc that has text
+                          const docIdx = docContents.findIndex(
+                            (d) => d.type !== "binary"
+                          );
+                          if (docIdx >= 0) setActiveDoc(docIdx);
+                        }}
                       >
-                        {f}
-                      </span>
+                        <SeverityIcon severity={risk.severity} />
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[13px] font-medium">{risk.clause}</span>
+                            <SeverityBadge severity={risk.severity} />
+                          </div>
+                          <p className="text-[12px] text-muted-foreground leading-relaxed">
+                            {risk.description}
+                          </p>
+                        </div>
+                      </div>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </CardContent>
+                </Card>
+              )}
 
-            {/* Bottom back button */}
-            <div className="flex justify-start pb-8">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.back()}
-                className="gap-1.5"
-              >
-                <ArrowLeft size={13} />
-                Back to Inbox
-              </Button>
+              {/* Recommended Questions */}
+              {result.recommendedQuestions.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <HelpCircle size={15} className="text-primary" />
+                      Questions to Ask
+                    </CardTitle>
+                    <CardDescription className="text-[11px]">
+                      Clarify these with the investor before proceeding.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <ol className="space-y-2.5">
+                      {result.recommendedQuestions.map((q, i) => (
+                        <li key={i} className="flex gap-3">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold flex items-center justify-center mt-0.5">
+                            {i + 1}
+                          </span>
+                          <p className="text-[13px] text-foreground/80 leading-relaxed">{q}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Analyzed files footer */}
+              {analyzedFiles.length > 0 && (
+                <Card className="bg-white border-dashed">
+                  <CardContent className="py-3 px-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <FileText size={12} className="text-muted-foreground shrink-0" />
+                      <span className="text-[11px] text-muted-foreground">Analyzed:</span>
+                      {analyzedFiles.map((f) => (
+                        <span key={f} className="text-[10px] bg-background border px-2 py-0.5 rounded-full text-muted-foreground">
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
             </div>
-          </>
-        )}
-      </div>
+          </div>
+
+        </div>
+      )}
     </div>
   );
 }
