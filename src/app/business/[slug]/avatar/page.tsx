@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { fetchBusiness } from "@/lib/api";
@@ -37,7 +38,7 @@ function useCallTimer(isActive: boolean) {
 export default function AvatarPage({ params }: Props) {
   const { slug } = use(params);
   const router = useRouter();
-  const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
 
   // ── Fetch real business from backend ──────────────────────────────────────
   const [businessName, setBusinessName] = useState<string>(slug);
@@ -47,41 +48,18 @@ export default function AvatarPage({ params }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoaded) {
-      return;
-    }
-
-    if (!user) {
-      router.replace("/auth/login");
-      return;
-    }
-
-    const role = (user.unsafeMetadata?.role ?? user.publicMetadata?.role) as string | undefined;
-    if (role === "FOUNDER") {
-      router.replace("/dashboard");
-    }
-  }, [isLoaded, router, user]);
-
-  useEffect(() => {
-    if (!isLoaded || !user) {
-      return;
-    }
-
-    fetchBusiness(slug)
+    getToken()
+      .then((token) => fetchBusiness(slug))
       .then((b) => {
         setBusinessName(b.name);
         setBusinessId(b.id);
         setBusinessOwnerId(b.ownerId);
         setLoadError(null);
       })
-      .catch((fetchError: Error & { status?: number }) => {
-        if (fetchError.status === 404) {
-          setNotFoundBusiness(true);
-          return;
-        }
-        setLoadError(fetchError.message || "Failed to load the interview session.");
-      });
-  }, [isLoaded, slug, user]);
+      .catch(() => setNotFoundBusiness(true));
+  }, [slug, getToken]);
+
+  if (notFoundBusiness) notFound();
 
   // ── Audio visualizer (mic level) ──────────────────────────────────────────
   const audio = useAudioAnalyzer();

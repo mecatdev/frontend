@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { use, useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { ArrowLeft, Video, Loader2 } from "lucide-react";
