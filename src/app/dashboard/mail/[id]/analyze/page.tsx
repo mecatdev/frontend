@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import type { Mail, Attachment } from "@/components/mail";
@@ -36,11 +36,17 @@ type AnalysisResult = {
   riskFeedback: string;
   recommendedQuestions: string[];
   risks?: RiskItem[];
+  extractedAttachments?: Array<{
+    name: string;
+    url: string;
+    type?: string;
+    text: string;
+  }>;
 };
 
 type DocumentContent = {
   name: string;
-  type: "message" | "text" | "binary";
+  type: "message" | "extract" | "preview";
   text?: string;
   url?: string;
   mimeType?: string;
@@ -121,12 +127,73 @@ function getLineSeverity(line: string, risks: RiskItem[]): string | null {
   return bestIdx < Infinity ? SEVERITY_ORDER[bestIdx] : null;
 }
 
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
+}
+
+function findBestRiskAnchor(
+  risk: RiskItem,
+  docs: DocumentContent[],
+): { docIndex: number; lineIndex: number } | null {
+  const clauseTokens = Array.from(new Set(tokenize(risk.clause)));
+  const descTokens = Array.from(new Set(tokenize(risk.description))).slice(0, 10);
+
+  const pickBestInDocs = (
+    candidates: Array<{ docIndex: number; doc: DocumentContent }>,
+  ): { docIndex: number; lineIndex: number } | null => {
+    let best: { score: number; docIndex: number; lineIndex: number } | null = null;
+
+    for (const { docIndex, doc } of candidates) {
+      if (!doc.text) continue;
+      const lines = doc.text.split("\n");
+
+      for (const [lineIndex, line] of lines.entries()) {
+        const lower = line.toLowerCase();
+        if (!lower.trim()) continue;
+
+        const clauseHits = clauseTokens.filter((w) => lower.includes(w)).length;
+        const descHits = descTokens.filter((w) => lower.includes(w)).length;
+        const score = clauseHits * 3 + descHits;
+        if (score <= 0) continue;
+
+        if (!best || score > best.score) {
+          best = { score, docIndex, lineIndex };
+        }
+      }
+    }
+
+    if (best === null) return null;
+    return { docIndex: best.docIndex, lineIndex: best.lineIndex };
+  };
+
+  // Priority 1: extracted attachment text (PDF/doc content)
+  const extractCandidates = docs
+    .map((doc, docIndex) => ({ doc, docIndex }))
+    .filter((x) => x.doc.type === "extract");
+  const extractBest = pickBestInDocs(extractCandidates);
+  if (extractBest) return extractBest;
+
+  // Priority 2: investor message text
+  const messageCandidates = docs
+    .map((doc, docIndex) => ({ doc, docIndex }))
+    .filter((x) => x.doc.type === "message");
+  return pickBestInDocs(messageCandidates);
+}
+
 function HighlightedText({
   text,
   risks,
+  focusedLine,
+  onLineRef,
 }: {
   text: string;
   risks: RiskItem[];
+  focusedLine?: number | null;
+  onLineRef?: (lineIndex: number, el: HTMLDivElement | null) => void;
 }) {
   const lines = text.split("\n");
   return (
@@ -137,9 +204,11 @@ function HighlightedText({
         return (
           <div
             key={i}
+            ref={(el) => onLineRef?.(i, el)}
             className={cn(
               "px-2 py-0.5 rounded-sm whitespace-pre-wrap break-all",
               severity ? SEVERITY_LINE_STYLE[severity] : "hover:bg-muted/20",
+              focusedLine === i && "ring-2 ring-primary/40 bg-primary/5",
             )}
           >
             {line}
@@ -196,6 +265,43 @@ export default function AnalyzePage({
   const [analyzedFiles, setAnalyzedFiles] = useState<string[]>([]);
   const [docContents, setDocContents] = useState<DocumentContent[]>([]);
   const [activeDoc, setActiveDoc] = useState(0);
+  const [focusedLine, setFocusedLine] = useState<number | null>(null);
+  const lineRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    lineRefs.current = {};
+  }, [activeDoc]);
+
+  useEffect(() => {
+    if (focusedLine === null) return;
+    const target = lineRefs.current[focusedLine];
+    if (target) {
+      target.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+
+    const timeout = setTimeout(() => {
+      setFocusedLine(null);
+    }, 2200);
+
+    return () => clearTimeout(timeout);
+  }, [focusedLine, activeDoc]);
+
+  const handleRiskClick = (risk: RiskItem) => {
+    const anchor = findBestRiskAnchor(risk, docContents);
+    if (anchor) {
+      setActiveDoc(anchor.docIndex);
+      setFocusedLine(anchor.lineIndex);
+      return;
+    }
+
+    const firstTextDoc = docContents.findIndex((d) => d.type === "extract");
+    const fallbackMessageDoc = docContents.findIndex((d) => d.type === "message");
+    const fallbackDoc = firstTextDoc >= 0 ? firstTextDoc : fallbackMessageDoc;
+    if (fallbackDoc >= 0) {
+      setActiveDoc(fallbackDoc);
+      setFocusedLine(null);
+    }
+  };
 
   useEffect(() => {
     async function run() {
@@ -258,20 +364,29 @@ export default function AnalyzePage({
 
       for (const att of attachments) {
         const text = await tryFetchText(att.url);
+
+        // Keep original file preview as its own tab.
+        docs.push({
+          name: att.name,
+          type: "preview",
+          url: att.url,
+          mimeType: att.type,
+        });
+
         if (text) {
           parts.push(`--- Attachment: ${att.name} ---\n${text.slice(0, 20000)}`);
           fileNames.push(att.name);
-          docs.push({ name: att.name, type: "text", text: text.slice(0, 20000) });
+          docs.push({
+            name: att.name,
+            type: "extract",
+            text: text.slice(0, 20000),
+            url: att.url,
+            mimeType: att.type,
+          });
         } else {
           // Include file name as context even if we can't read content
           parts.push(`--- Attachment: ${att.name} (${att.type}, binary file) ---`);
           fileNames.push(att.name);
-          docs.push({
-            name: att.name,
-            type: "binary",
-            url: att.url,
-            mimeType: att.type,
-          });
         }
       }
 
@@ -301,6 +416,29 @@ export default function AnalyzePage({
             })),
           }),
         });
+
+        const extractedMap = new Map(
+          (data.extractedAttachments ?? []).map((ea) => [ea.url, ea]),
+        );
+
+        const mergedDocs = docs.map((doc) => {
+          if (doc.type !== "preview" || !doc.url) return [doc];
+          const extracted = extractedMap.get(doc.url);
+          if (!extracted?.text?.trim()) return [doc];
+          return [
+            doc,
+            {
+              name: doc.name,
+              type: "extract" as const,
+              text: extracted.text.slice(0, 20000),
+              url: doc.url,
+              mimeType: doc.mimeType,
+            },
+          ];
+        });
+
+        setDocContents(mergedDocs.flat());
+
         setResult(data);
         setStatus("done");
       } catch {
@@ -433,7 +571,16 @@ export default function AnalyzePage({
                     )}
                     title={doc.name}
                   >
-                    {doc.name}
+                    <span className="inline-flex items-center gap-1">
+                      <span className="opacity-70">
+                        {doc.type === "message"
+                          ? "Msg"
+                          : doc.type === "extract"
+                            ? "Extract"
+                            : "Preview"}
+                      </span>
+                      <span className="truncate max-w-[110px]">{doc.name}</span>
+                    </span>
                   </button>
                 ))}
               </div>
@@ -449,7 +596,7 @@ export default function AnalyzePage({
                   </div>
                 );
 
-                if (doc.type === "binary") {
+                if (doc.type === "preview") {
                   const fileUrl = resolveUrl(doc.url ?? "");
                   const isPdf =
                     doc.mimeType?.includes("pdf") || doc.name.endsWith(".pdf");
@@ -482,12 +629,16 @@ export default function AnalyzePage({
                   );
                 }
 
-                // text / message
+                // text modes: extracted content or message body
                 return (
                   <div className="p-4">
                     <HighlightedText
                       text={doc.text ?? ""}
                       risks={result.risks ?? []}
+                      focusedLine={focusedLine}
+                      onLineRef={(lineIndex, el) => {
+                        lineRefs.current[lineIndex] = el;
+                      }}
                     />
                   </div>
                 );
@@ -572,13 +723,7 @@ export default function AnalyzePage({
                       <div
                         key={i}
                         className="flex gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors cursor-pointer"
-                        onClick={() => {
-                          // scroll to highlight: find the first doc that has text
-                          const docIdx = docContents.findIndex(
-                            (d) => d.type !== "binary"
-                          );
-                          if (docIdx >= 0) setActiveDoc(docIdx);
-                        }}
+                        onClick={() => handleRiskClick(risk)}
                       >
                         <SeverityIcon severity={risk.severity} />
                         <div className="flex-1 min-w-0 space-y-1">
