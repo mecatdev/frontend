@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, ScanSearch } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { apiFetch, apiUpload } from "@/lib/api";
 import {
   type Mail,
@@ -161,6 +162,7 @@ function BusinessThread({
   currentUserId: string;
   onReplySuccess: (reply: Mail) => void;
 }) {
+  const router = useRouter();
   const [sending, setSending] = useState(false);
   const [dealInfo, setDealInfo] = useState<DealInfo>(null);
   const [dealLoading, setDealLoading] = useState(true);
@@ -173,6 +175,13 @@ function BusinessThread({
   );
 
   const investorId = mail.sender.id;
+
+  // check if any message from the investor (non-current-user) has attachments
+  const investorAttachments = useMemo(() => {
+    return allMessages
+      .filter((m) => m.sender.id !== currentUserId && (m.attachments?.length ?? 0) > 0)
+      .flatMap((m) => m.attachments ?? []);
+  }, [allMessages, currentUserId]);
 
   useEffect(() => {
     apiFetch<
@@ -263,7 +272,18 @@ function BusinessThread({
               </span>
             </div>
           </div>
-          <div className="shrink-0">
+          <div className="shrink-0 flex items-center gap-2">
+            {investorAttachments.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8"
+                onClick={() => router.push(`/dashboard/mail/${mail.id}/analyze`)}
+              >
+                <ScanSearch size={13} />
+                Analyze Document
+              </Button>
+            )}
             {!dealLoading && dealInfo && dealInfo.deal.status === "DRAFT" && (
               <Button
                 onClick={handleApprove}
