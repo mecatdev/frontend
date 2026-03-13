@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import type { ChatMessage } from "@/app/business/[slug]/avatar/components/chat-panel";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 interface UseVoiceSessionOptions {
   businessId: string | null;
@@ -21,10 +21,40 @@ export interface VoiceSession {
   sendText: (text: string) => Promise<void>;
 }
 
+type BrowserSpeechRecognitionAlternative = {
+  transcript: string;
+};
+
+type BrowserSpeechRecognitionResult = {
+  0: BrowserSpeechRecognitionAlternative;
+};
+
+type BrowserSpeechRecognitionEvent = {
+  results: ArrayLike<BrowserSpeechRecognitionResult>;
+};
+
+type BrowserSpeechRecognitionErrorEvent = {
+  error: string;
+};
+
+type BrowserSpeechRecognition = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null;
+  onerror: ((event: BrowserSpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  abort: () => void;
+  start: () => void;
+  stop: () => void;
+};
+
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
+    SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
   }
 }
 
@@ -38,7 +68,7 @@ export function useVoiceSession({ businessId }: UseVoiceSessionOptions): VoiceSe
   const [error, setError] = useState<string | null>(null);
 
   const conversationIdRef = useRef<string | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const activeRef = useRef(false); // true = mic is supposed to be on
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -55,12 +85,12 @@ export function useVoiceSession({ businessId }: UseVoiceSessionOptions): VoiceSe
     rec.interimResults = false;
     rec.lang = "id-ID";
 
-    rec.onresult = (e: SpeechRecognitionEvent) => {
+    rec.onresult = (e: BrowserSpeechRecognitionEvent) => {
       const transcript = e.results[e.results.length - 1][0].transcript.trim();
       if (transcript) sendTextInternal(transcript);
     };
 
-    rec.onerror = (e: SpeechRecognitionErrorEvent) => {
+    rec.onerror = (e: BrowserSpeechRecognitionErrorEvent) => {
       if (e.error !== "no-speech" && e.error !== "aborted") {
         setError(`Mic error: ${e.error}`);
       }

@@ -12,8 +12,15 @@ export default function DashboardPage() {
   }
 
   if (business.verificationStatus === "PENDING") {
-    return <PendingDashboard />;
+    return (
+      <PendingDashboard
+        business={business}
+        isOwner
+        verifiedRedirectPath="/dashboard"
+        retryRedirectPath="/dashboard"
+      />
+    );
   }
 
-  return <VerificationForm status={business.verificationStatus} />;
+  return <VerificationForm businessId={business.id} status={business.verificationStatus} />;
 }

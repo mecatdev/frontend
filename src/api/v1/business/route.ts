@@ -15,8 +15,24 @@ export interface MyBusiness {
   fundingCurrency: string | null;
   isPublished: boolean;
   verificationStatus: BusinessVerificationStatus;
+  score: number;
+  scoredAt: string | null;
+  scores?: BusinessScore[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BusinessScore {
+  id: string;
+  category: string;
+  score: number;
+  maxScore: number;
+  metadata?: {
+    label?: string;
+    reason?: string;
+    [key: string]: unknown;
+  } | null;
+  createdAt: string;
 }
 
 export interface VerifyBusinessResponse {

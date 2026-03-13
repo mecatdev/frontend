@@ -88,11 +88,18 @@ export function VerifiedDashboard({ business }: { business: MyBusiness }) {
       <div className="mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Image src="/logo.svg" alt="" width={40} height={40} />
-          <div>
+          <div className="space-y-1">
             <h1 className="text-2xl font-bold">{business.name}</h1>
-            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-              Verified
-            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                Verified
+              </span>
+              {business.scoredAt && (
+                <span className="text-xs bg-background px-2 py-0.5 rounded-full font-medium">
+                  AI score: {business.score}/100
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <p className="text-muted-foreground text-sm">

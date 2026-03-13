@@ -40,6 +40,7 @@ export default function AvatarPage({ params }: Props) {
   // ── Fetch real business from backend ──────────────────────────────────────
   const [businessName, setBusinessName] = useState<string>(slug);
   const [businessId, setBusinessId] = useState<string | null>(null);
+  const [businessOwnerId, setBusinessOwnerId] = useState<string | null>(null);
   const [notFoundBusiness, setNotFoundBusiness] = useState(false);
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function AvatarPage({ params }: Props) {
       .then((b) => {
         setBusinessName(b.name);
         setBusinessId(b.id);
+        setBusinessOwnerId(b.ownerId);
       })
       .catch(() => setNotFoundBusiness(true));
   }, [slug]);
@@ -167,11 +169,15 @@ export default function AvatarPage({ params }: Props) {
       {/* Right panel */}
       <ChatPanel messages={voice.messages} isOpen={isChatOpen} />
 
-      <EndCallDialog
-        open={isEndCallOpen}
-        businessName={businessName}
-        onComplete={handleComplete}
-      />
+      {businessId && businessOwnerId && (
+        <EndCallDialog
+          open={isEndCallOpen}
+          businessId={businessId}
+          businessName={businessName}
+          businessOwnerId={businessOwnerId}
+          onComplete={handleComplete}
+        />
+      )}
     </div>
   );
 }

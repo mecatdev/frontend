@@ -6,19 +6,17 @@ import { apiFetch } from "@/lib/api";
 import type { MyBusiness } from "@/api/v1/business/route";
 import { VerifiedDashboard } from "@/app/dashboard/components/verified-dashboard";
 import { PendingDashboard } from "@/app/dashboard/components/pending-dashboard";
-import { VerificationFormById } from "@/app/dashboard/components/verification-form-by-id";
+import { VerificationForm } from "@/app/dashboard/components/verification-form";
 
 type Props = { params: Promise<{ id: string }> };
 
 export default function BusinessManagePage({ params }: Props) {
   const { id } = use(params);
-  const { getToken } = useAuth();
   const [business, setBusiness] = useState<MyBusiness | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function load() {
-    const token = await getToken();
-    const data = await apiFetch<MyBusiness>(`/businesses/${id}`, {}, token);
+    const data = await apiFetch<MyBusiness>(`/businesses/${id}`, {});
     setBusiness(data);
   }
 
@@ -43,6 +41,24 @@ export default function BusinessManagePage({ params }: Props) {
   }
 
   if (business.verificationStatus === "VERIFIED") return <VerifiedDashboard business={business} />;
-  if (business.verificationStatus === "PENDING") return <PendingDashboard business={business} />;
-  return <VerificationFormById businessId={id} status={business.verificationStatus} onSuccess={() => load()} />;
+  if (business.verificationStatus === "PENDING") {
+    return (
+      <PendingDashboard
+        business={business}
+        isOwner
+        onResolved={() => load()}
+        verifiedRedirectPath={`/dashboard/business/${id}`}
+        retryRedirectPath={`/dashboard/business/${id}`}
+      />
+    );
+  }
+
+  return (
+    <VerificationForm
+      businessId={id}
+      status={business.verificationStatus}
+      redirectPath={`/dashboard/business/${id}`}
+      onSuccess={() => load()}
+    />
+  );
 }

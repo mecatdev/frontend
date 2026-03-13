@@ -16,7 +16,8 @@ export async function listKnowledgeChunks(
   businessId: string,
   token?: string | null
 ): Promise<KnowledgeChunk[]> {
-  return apiFetch<KnowledgeChunk[]>(`/knowledge/${businessId}/chunks`, {}, token);
+  void token;
+  return apiFetch<KnowledgeChunk[]>(`/knowledge/${businessId}/chunks`);
 }
 
 export async function uploadKnowledgeFile(
@@ -48,5 +49,6 @@ export async function deleteKnowledgeChunk(
   chunkId: string,
   token?: string | null
 ): Promise<void> {
-  await apiFetch(`/knowledge/${businessId}/chunks/${chunkId}`, { method: "DELETE" }, token);
+  void token;
+  await apiFetch(`/knowledge/${businessId}/chunks/${chunkId}`, { method: "DELETE" });
 }
