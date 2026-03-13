@@ -403,7 +403,7 @@ export function ReplyComposer({
         </div>
       )}
 
-      <div className="flex items-end gap-2 justify-end border border-border-60 p-4 rounded-xl">
+      <div className="flex items-end gap-2 justify-between border border-border-60 p-4 rounded-xl">
         <Textarea
           placeholder="Write a reply…"
           value={body}
@@ -412,7 +412,7 @@ export function ReplyComposer({
           className="min-h-[88px] p-0 resize-none text-sm shadow-none bg-transparent border-none focus-visible:ring-0"
           disabled={sending}
         />
-        <div>
+        <div className="flex gap-2 items-center">
           <input
             type="file"
             ref={fileRef}
@@ -435,8 +435,6 @@ export function ReplyComposer({
             </TooltipTrigger>
             <TooltipContent>Attach files</TooltipContent>
           </Tooltip>
-        </div>
-        <div className="flex items-center">
           <Button
             onClick={handleSubmit}
             disabled={sending || (!body.trim() && files.length === 0)}
