@@ -21,10 +21,13 @@ export interface VoiceSession {
   sendText: (text: string) => Promise<void>;
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type SpeechRecognitionType = any;
+
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
+    SpeechRecognition: SpeechRecognitionType;
+    webkitSpeechRecognition: SpeechRecognitionType;
   }
 }
 
@@ -38,47 +41,50 @@ export function useVoiceSession({ businessId }: UseVoiceSessionOptions): VoiceSe
   const [error, setError] = useState<string | null>(null);
 
   const conversationIdRef = useRef<string | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const activeRef = useRef(false); // true = mic is supposed to be on
+  const recognitionRef = useRef<any>(null);
+  const activeRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // ── Build & init SpeechRecognition ────────────────────────────────────────
-  const initRecognition = useCallback(() => {
-    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!SR) {
-      setError("Browser ini tidak mendukung speech recognition. Gunakan Chrome/Edge.");
-      return null;
-    }
+  // Ref to always hold the latest sendTextInternal, so recognition callback
+  // never captures a stale closure with businessId === null
+  const sendTextRef = useRef<(text: string) => Promise<void>>(async () => {});
 
-    const rec = new SR();
-    rec.continuous = false;
-    rec.interimResults = false;
-    rec.lang = "id-ID";
+  // ── Play base64 WAV ────────────────────────────────────────────────────────
+  const playAudioBase64 = useCallback(async (base64: string, mimeType: string) => {
+    return new Promise<void>((resolve) => {
+      setIsSpeaking(true);
 
-    rec.onresult = (e: SpeechRecognitionEvent) => {
-      const transcript = e.results[e.results.length - 1][0].transcript.trim();
-      if (transcript) sendTextInternal(transcript);
-    };
+      try {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: mimeType });
+        const url = URL.createObjectURL(blob);
 
-    rec.onerror = (e: SpeechRecognitionErrorEvent) => {
-      if (e.error !== "no-speech" && e.error !== "aborted") {
-        setError(`Mic error: ${e.error}`);
-      }
-    };
+        const audio = new Audio(url);
+        audioRef.current = audio;
 
-    // Auto-restart when single utterance ends
-    rec.onend = () => {
-      if (activeRef.current) {
-        setTimeout(() => {
-          if (activeRef.current) {
-            try { rec.start(); } catch { /* already started */ }
+        const cleanup = () => {
+          URL.revokeObjectURL(url);
+          setIsSpeaking(false);
+          // Resume STT after AI finishes speaking
+          if (activeRef.current && recognitionRef.current) {
+            setTimeout(() => {
+              try { recognitionRef.current?.start(); } catch { /* ok */ }
+            }, 300);
           }
-        }, 200);
-      }
-    };
+          resolve();
+        };
 
-    return rec;
-  }, []); // eslint-disable-line
+        audio.onended = cleanup;
+        audio.onerror = cleanup;
+        audio.play().catch(cleanup);
+      } catch {
+        setIsSpeaking(false);
+        resolve();
+      }
+    });
+  }, []);
 
   // ── Send text to backend ───────────────────────────────────────────────────
   const sendTextInternal = useCallback(async (text: string) => {
@@ -134,43 +140,52 @@ export function useVoiceSession({ businessId }: UseVoiceSessionOptions): VoiceSe
     } finally {
       setIsThinking(false);
     }
-  }, [businessId, getToken]); // eslint-disable-line
+  }, [businessId, getToken, playAudioBase64]);
 
-  // ── Play base64 WAV ────────────────────────────────────────────────────────
-  const playAudioBase64 = useCallback(async (base64: string, mimeType: string) => {
-    return new Promise<void>((resolve) => {
-      setIsSpeaking(true);
+  // Keep the ref always pointing to the latest sendTextInternal
+  useEffect(() => {
+    sendTextRef.current = sendTextInternal;
+  }, [sendTextInternal]);
 
-      try {
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const blob = new Blob([bytes], { type: mimeType });
-        const url = URL.createObjectURL(blob);
+  // ── Build & init SpeechRecognition ────────────────────────────────────────
+  const initRecognition = useCallback(() => {
+    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!SR) {
+      setError("Browser ini tidak mendukung speech recognition. Gunakan Chrome/Edge.");
+      return null;
+    }
 
-        const audio = new Audio(url);
-        audioRef.current = audio;
+    const rec = new SR();
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.lang = "id-ID";
 
-        const cleanup = () => {
-          URL.revokeObjectURL(url);
-          setIsSpeaking(false);
-          // Resume STT after AI finishes speaking
-          if (activeRef.current && recognitionRef.current) {
-            setTimeout(() => {
-              try { recognitionRef.current?.start(); } catch { /* ok */ }
-            }, 300);
-          }
-          resolve();
-        };
-
-        audio.onended = cleanup;
-        audio.onerror = cleanup;
-        audio.play().catch(cleanup);
-      } catch {
-        setIsSpeaking(false);
-        resolve();
+    rec.onresult = (e: any) => {
+      const transcript = e.results[e.results.length - 1][0].transcript.trim();
+      if (transcript) {
+        // Use ref so we always call the latest version (with current businessId)
+        sendTextRef.current(transcript);
       }
-    });
+    };
+
+    rec.onerror = (e: any) => {
+      if (e.error !== "no-speech" && e.error !== "aborted") {
+        setError(`Mic error: ${e.error}`);
+      }
+    };
+
+    // Auto-restart when single utterance ends
+    rec.onend = () => {
+      if (activeRef.current) {
+        setTimeout(() => {
+          if (activeRef.current) {
+            try { rec.start(); } catch { /* already started */ }
+          }
+        }, 200);
+      }
+    };
+
+    return rec;
   }, []);
 
   // ── Public controls ────────────────────────────────────────────────────────

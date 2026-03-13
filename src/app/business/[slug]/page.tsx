@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { ArrowLeft, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,17 +40,19 @@ function formatFunding(amount: number | string | null, currency: string | null) 
 export default function BusinessDetailPage({ params }: Props) {
   const { slug } = use(params);
   const router = useRouter();
+  const { getToken } = useAuth();
 
   const [business, setBusiness] = useState<BusinessDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(false);
 
   useEffect(() => {
-    fetchBusiness(slug)
+    getToken()
+      .then((token) => fetchBusiness(slug, token))
       .then((b) => setBusiness(b as unknown as BusinessDetail))
       .catch(() => setMissing(true))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, getToken]);
 
   if (missing) notFound();
 

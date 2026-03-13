@@ -99,9 +99,10 @@ export async function fetchBusinesses(): Promise<Business[]> {
 }
 
 export async function fetchBusiness(
-  idOrSlug: string
+  idOrSlug: string,
+  token?: string | null
 ): Promise<Business & { traction?: unknown; revenue?: unknown; teamInfo?: unknown }> {
-  return apiFetch(`/businesses/${encodeURIComponent(idOrSlug)}`);
+  return apiFetch(`/businesses/${encodeURIComponent(idOrSlug)}`, {}, token);
 }
 
 export async function getDemoUserId(): Promise<string> {

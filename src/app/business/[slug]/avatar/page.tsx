@@ -2,6 +2,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { fetchBusiness } from "@/lib/api";
@@ -36,6 +37,7 @@ function useCallTimer(isActive: boolean) {
 export default function AvatarPage({ params }: Props) {
   const { slug } = use(params);
   const router = useRouter();
+  const { getToken } = useAuth();
 
   // ── Fetch real business from backend ──────────────────────────────────────
   const [businessName, setBusinessName] = useState<string>(slug);
@@ -43,13 +45,14 @@ export default function AvatarPage({ params }: Props) {
   const [notFoundBusiness, setNotFoundBusiness] = useState(false);
 
   useEffect(() => {
-    fetchBusiness(slug)
+    getToken()
+      .then((token) => fetchBusiness(slug, token))
       .then((b) => {
         setBusinessName(b.name);
         setBusinessId(b.id);
       })
       .catch(() => setNotFoundBusiness(true));
-  }, [slug]);
+  }, [slug, getToken]);
 
   if (notFoundBusiness) notFound();
 
