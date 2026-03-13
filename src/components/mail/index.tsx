@@ -46,9 +46,6 @@ export type Mail = {
   replies?: Mail[];
 };
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL ;
-
 export function formatRelativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   if (diff < 0) return "now";
@@ -82,7 +79,7 @@ function formatFileSize(bytes: number): string {
 
 function resolveAttachmentUrl(url: string): string {
   if (url.startsWith("http")) return url;
-  return `${BACKEND_URL}${url}`;
+  return url;
 }
 
 export function UserAvatar({
