@@ -3,7 +3,6 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { fetchBusiness } from "@/lib/api";
@@ -38,7 +37,7 @@ function useCallTimer(isActive: boolean) {
 export default function AvatarPage({ params }: Props) {
   const { slug } = use(params);
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { isLoaded, user } = useUser();
 
   // ── Fetch real business from backend ──────────────────────────────────────
   const [businessName, setBusinessName] = useState<string>(slug);
@@ -48,8 +47,7 @@ export default function AvatarPage({ params }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    getToken()
-      .then((token) => fetchBusiness(slug))
+    fetchBusiness(slug)
       .then((b) => {
         setBusinessName(b.name);
         setBusinessId(b.id);
@@ -57,9 +55,7 @@ export default function AvatarPage({ params }: Props) {
         setLoadError(null);
       })
       .catch(() => setNotFoundBusiness(true));
-  }, [slug, getToken]);
-
-  if (notFoundBusiness) notFound();
+  }, [slug]);
 
   // ── Audio visualizer (mic level) ──────────────────────────────────────────
   const audio = useAudioAnalyzer();
