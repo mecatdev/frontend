@@ -18,11 +18,12 @@ function getImageHeight(id: string): number {
 
 type Props = {
   business: Business;
+  mode?: "masonry" | "standard";
 };
 
-export function MasonryCard({ business }: Props) {
+export function MasonryCard({ business, mode = "masonry" }: Props) {
   const router = useRouter();
-  const imageHeight = getImageHeight(business.id);
+  const imageHeight = mode === "masonry" ? getImageHeight(business.id) : 220;
   const avatarUrl = business.owner.avatarUrl || "/logo.svg";
 
   return (

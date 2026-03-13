@@ -39,6 +39,7 @@ export default function AvatarPage({ params }: Props) {
   const { slug } = use(params);
   const router = useRouter();
   const { getToken } = useAuth();
+  const { isLoaded, user } = useUser();
 
   // ── Fetch real business from backend ──────────────────────────────────────
   const [businessName, setBusinessName] = useState<string>(slug);
